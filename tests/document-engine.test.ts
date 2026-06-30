@@ -1743,6 +1743,21 @@ describe("browser smoke workflow", () => {
     assert.match(smokeRunner, /Stop-Job/);
   });
 
+  it("keeps a one-command local app starter wired", () => {
+    const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
+    const starter = fs.readFileSync(path.resolve("scripts/ensure-dev-server.ps1"), "utf8");
+
+    assert.equal(
+      packageJson.scripts["app:up"],
+      "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-dev-server.ps1",
+    );
+    assert.match(starter, /\/api\/health/);
+    assert.match(starter, /Start-Process/);
+    assert.match(starter, /-WindowStyle Hidden/);
+    assert.match(starter, /run-dev-server\.ps1/);
+    assert.match(starter, /FriStD-Bau ERP gestartet/);
+  });
+
   it("keeps local development startup pinned to a modern bundled Node and a real health route", () => {
     const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
     const startCmd = fs.readFileSync(path.resolve("scripts/start-dev-node24.cmd"), "utf8");

@@ -7,6 +7,7 @@
     "dev": "scripts\\start-dev.cmd",
     "dev:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-dev.ps1",
     "dev:node24": "scripts\\start-dev-node24.cmd",
+    "app:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-dev-server.ps1",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
