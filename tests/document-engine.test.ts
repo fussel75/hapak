@@ -1063,7 +1063,8 @@ describe("document editor display polish guards", () => {
     assert.match(a4Source, /const labelColPct = gpColumnPercent \? `\$\{100 - gpColumnPercent\}%` : "82%"/);
     assert.match(a4Source, /function splitTrailingGermanAmount/);
     assert.match(a4Source, /const summaryValueBase = "py-1\.5 pr-0\.5 pl-0 text-right tabular-nums text-slate-900"/);
-    assert.match(a4Source, /const summaryEditButtonClass = "absolute -right-3/);
+    assert.match(a4Source, /const summaryEditButtonClass = "absolute right-0/);
+    assert.doesNotMatch(a4Source, /summaryEditButtonClass = "absolute -right-/);
     assert.match(a4Source, /import \{ X \} from "lucide-react"/);
     assert.match(a4Source, /summaryEditButtonClass/);
     assert.doesNotMatch(summaryBlock, /hover:text-blue-600/);

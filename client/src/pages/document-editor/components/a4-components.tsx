@@ -378,7 +378,7 @@ export function SummaryAndFooterBlock({
   const labelColPct = gpColumnPercent ? `${100 - gpColumnPercent}%` : "82%";
   const summaryCellBase = "py-1.5 text-slate-900";
   const summaryValueBase = "py-1.5 pr-0.5 pl-0 text-right tabular-nums text-slate-900";
-  const summaryEditButtonClass = "absolute -right-3 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
+  const summaryEditButtonClass = "absolute right-0 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
 
   const toggleHide = (field: "hideNetto" | "hideMwst" | "hideGesamt" | "showLohnanteil") => {
     setDocForm((f: any) => ({ ...f, [field]: !f[field] }));
