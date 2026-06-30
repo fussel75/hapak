@@ -1656,6 +1656,10 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /button-collapse-all/);
     assert.match(smokeScript, /button-expand-all/);
     assert.match(smokeScript, /darin enthalten:/);
+    assert.match(smokeScript, /assertImportedHapakInvoiceVisualGuards/);
+    assert.match(smokeScript, /2-fach Schukosteckdose/);
+    assert.match(smokeScript, /Fremdleistungsanteil aus HAPAK-JUMBO/);
+    assert.match(smokeScript, /hasBrokenTitleSumText/);
     assert.match(smokeScript, /firstDocument\.id/);
     assert.match(smokeScript, /pdf basis-dokument/);
     assert.match(smokeScript, /application\/pdf/);

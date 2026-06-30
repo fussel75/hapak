@@ -354,6 +354,60 @@ async function assertImportedHapakDocumentVisualGuards(page) {
   console.log("ok importiertes HAPAK-Dokument ohne sichtbare Anhängen-Artefakte");
 }
 
+async function assertImportedHapakInvoiceVisualGuards(page) {
+  const docState = await page.evaluate(async () => {
+    const response = await fetch("/api/documents?search=26-00058&limit=20", { credentials: "include" });
+    if (!response.ok) return { ok: false, status: response.status, id: null, message: "Dokumentsuche fehlgeschlagen" };
+    const result = await response.json();
+    const documents = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
+    const doc = documents.find((entry) => entry.documentNumber === "26-00058" && entry.type === "abschlagsrechnung");
+    if (!doc?.id) return { ok: false, status: response.status, id: null, message: "26-00058 nicht gefunden" };
+    return { ok: true, status: response.status, id: doc.id, message: "" };
+  });
+
+  if (!docState.ok || !docState.id) {
+    throw new Error(`imported HAPAK invoice visual guards: ${docState.message}`);
+  }
+
+  await gotoAndCheck(page, `/dokumente/${docState.id}/bearbeiten`, "importierte HAPAK-Rechnung 26-00058 editor");
+  await page.waitForFunction(
+    () => (document.querySelector('[data-testid="text-doc-title"]')?.textContent || "").includes("26-00058"),
+    { timeout: 20_000 },
+  );
+
+  const visualState = await page.evaluate(() => {
+    const bodyText = document.body?.innerText || "";
+    const rowLines = Array.from(document.querySelectorAll("[data-row]"))
+      .map((row) => (row.textContent || "").replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const socketRow = rowLines.find((text) => text.includes("2-fach Schukosteckdose")) || "";
+    return {
+      hasSyntheticJumboLabor: bodyText.includes("Lohnanteil aus HAPAK-JUMBO") || bodyText.includes("Fremdleistungsanteil aus HAPAK-JUMBO"),
+      hasInvoiceTitle: bodyText.includes("Rechnung 26-00058"),
+      socketRow,
+      hasSocketRow: socketRow.includes("2-fach Schukosteckdose"),
+      hasSocketNumber: /(^|[^\d])1\.1\.1([^\d]|$)/.test(socketRow),
+      hasSocketUnitPrice: socketRow.includes("156,15"),
+      hasSocketTotalPrice: socketRow.includes("874,44"),
+      hasBrokenTitleSumText: bodyText.includes("Titelumme"),
+    };
+  });
+
+  if (
+    visualState.hasSyntheticJumboLabor ||
+    !visualState.hasInvoiceTitle ||
+    !visualState.hasSocketRow ||
+    !visualState.hasSocketNumber ||
+    !visualState.hasSocketUnitPrice ||
+    !visualState.hasSocketTotalPrice ||
+    visualState.hasBrokenTitleSumText
+  ) {
+    throw new Error(`imported HAPAK invoice visual guards: sichtbare Rechnung 26-00058 unerwartet ${JSON.stringify(visualState)}`);
+  }
+
+  console.log("ok importierte HAPAK-Rechnung 26-00058 ohne sichtbare Jumbo-Import-Artefakte");
+}
+
 async function withTemporaryEditorDocument(page, callback) {
   const marker = `Smoke Editor ${Date.now()}`;
   let documentId = null;
@@ -942,6 +996,7 @@ try {
   await assertDocumentConversionProjectTree(page);
   await assertExistingDocumentPdf(page);
   await assertImportedHapakDocumentVisualGuards(page);
+  await assertImportedHapakInvoiceVisualGuards(page);
   await gotoAndCheck(page, "/projekte", "projekte page");
   await withTemporaryEditorDocument(page, async () => {
     await assertDisplayModeMenu(page);
