@@ -1,0 +1,24 @@
+node_modules/
+dist/
+
+*.log
+dev-server.*.log
+
+.env
+.env.*
+!.env.example
+
+coverage/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Local HAPAK import/staging data can contain customer/project data.
+hapak_snapshot_readonly_2026/
+hapak-stage-2026*.json
+
+# Runtime/user uploads are local data, not source code.
+server/uploads/
+
+# Local export/archive files should not be shipped as app assets.
+client/public/*.zip
