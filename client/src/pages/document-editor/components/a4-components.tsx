@@ -1,5 +1,6 @@
 ﻿import { useState } from "react";
 import type { Customer, FormTemplate, CompanySettings, Project, Document as DocType } from "@shared/schema";
+import { X } from "lucide-react";
 import { fmtCurrency, fmtPercent, fmtNumber, fmtDocNumber } from "@/lib/format";
 import { resolveTemplate } from "@shared/document-engine/template/resolve-template";
 import type { ResolvedTemplate } from "@shared/document-engine/types";
@@ -366,8 +367,11 @@ export function SummaryAndFooterBlock({
   const fmtP = (v: string | number | null | undefined) => fmtCurrency(v, dezimalstellenPreise);
   const mwstLabel = (ec.labelMwst || "zzgl. {satz} % MwSt.").replace("{satz}", fmtNumber(docForm.taxRate));
   const lohnLabel = (ec.labelLohn || "dav. Lohnanteil (§35a EstG): {betrag}").replace("{betrag}", fmtP(laborTotal));
-  const valueColPct = gpColumnPercent ? `${gpColumnPercent}%` : "15%";
-  const labelColPct = gpColumnPercent ? `${100 - gpColumnPercent}%` : "85%";
+  const valueColPct = gpColumnPercent ? `${gpColumnPercent}%` : "18%";
+  const labelColPct = gpColumnPercent ? `${100 - gpColumnPercent}%` : "82%";
+  const summaryCellBase = "py-1.5 text-slate-900";
+  const summaryValueBase = "py-1.5 text-right tabular-nums text-slate-900";
+  const summaryEditButtonClass = "absolute right-0 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
 
   const toggleHide = (field: "hideNetto" | "hideMwst" | "hideGesamt" | "showLohnanteil") => {
     setDocForm((f: any) => ({ ...f, [field]: !f[field] }));
@@ -407,7 +411,7 @@ export function SummaryAndFooterBlock({
           )}
         </div>
       )}
-      <table className="w-full border-collapse table-fixed" style={{ fontFamily: nettoFont.fontFamily, fontSize: `${nettoFont.fontSize}pt` }} data-testid="table-summary">
+      <table className="w-full border-collapse table-fixed text-slate-900" style={{ fontFamily: nettoFont.fontFamily, fontSize: `${nettoFont.fontSize}pt` }} data-testid="table-summary">
         <colgroup>
           <col style={{ width: labelColPct }} />
           <col style={{ width: valueColPct }} />
@@ -415,17 +419,17 @@ export function SummaryAndFooterBlock({
         <tbody>
           {!effectiveHideNetto && (
             <tr className="group/netto">
-              <td className="py-1.5 text-gray-600" style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, fontWeight: nettoFont.fontWeight }}>
+              <td className={`${summaryCellBase} relative pr-4`} style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, fontWeight: nettoFont.fontWeight }}>
                 {ec.labelNetto}
                 <button
-                  className="ml-2 opacity-0 group-hover/netto:opacity-100 text-red-300 hover:text-red-500 transition-opacity"
+                  className={summaryEditButtonClass}
                   onClick={() => toggleHide("hideNetto")}
                   title="Nettosumme ausblenden"
                   data-testid="button-hide-netto"
-                >×</button>
+                ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
               </td>
               <td
-                className={`py-1.5 text-right tabular-nums ${onNettoClick ? "cursor-pointer hover:text-blue-600 hover:underline" : ""}`}
+                className={`${summaryValueBase} ${onNettoClick ? "cursor-pointer" : ""}`}
                 style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, fontWeight: "bold" }}
                 data-testid="text-summary-netto"
                 onClick={onNettoClick}
@@ -442,16 +446,16 @@ export function SummaryAndFooterBlock({
             </tr>
           ) : !docForm.hideMwst && (
             <tr className="group/mwst">
-              <td className="text-gray-500" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }}>
+              <td className="relative pr-4 text-slate-600" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }}>
                 {mwstLabel}
                 <button
-                  className="ml-2 opacity-0 group-hover/mwst:opacity-100 text-red-300 hover:text-red-500 transition-opacity"
+                  className={summaryEditButtonClass}
                   onClick={() => toggleHide("hideMwst")}
                   title="Umsatzsteuer ausblenden"
                   data-testid="button-hide-mwst"
-                >×</button>
+                ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
               </td>
-              <td className="text-right tabular-nums text-gray-500" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }} data-testid="text-summary-mwst">
+              <td className="text-right tabular-nums text-slate-600" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }} data-testid="text-summary-mwst">
                 {fmtP(taxAmount)}
               </td>
             </tr>
@@ -462,16 +466,16 @@ export function SummaryAndFooterBlock({
             const bottomBorder = isDoppelt ? `${ec.linienBreiteGesamt || 1}pt solid #1f2937` : undefined;
             return (
               <tr className="group/gesamt">
-                <td className="font-bold" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }}>
+                <td className="relative pr-4 font-bold text-slate-950" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }}>
                   {ec.labelGesamt}
                   <button
-                    className="ml-2 opacity-0 group-hover/gesamt:opacity-100 text-red-300 hover:text-red-500 transition-opacity"
+                    className={summaryEditButtonClass}
                     onClick={() => toggleHide("hideGesamt")}
                     title="Gesamtsumme ausblenden"
                     data-testid="button-hide-gesamt"
-                  >×</button>
+                  ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
                 </td>
-                <td className="text-right tabular-nums" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }} data-testid="text-summary-brutto">
+                <td className="text-right tabular-nums text-slate-950" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }} data-testid="text-summary-brutto">
                   {fmtP(par13bActive ? netTotal : grossTotal)}
                 </td>
               </tr>
@@ -480,19 +484,19 @@ export function SummaryAndFooterBlock({
           {laborTotal > 0 && !docForm.hideGesamt && (
             <tr className="group/lohn">
               {docForm.showLohnanteil ? (
-                <td className="text-gray-400 py-0.5" colSpan={2} style={{ fontSize: `${Math.max(nettoFont.fontSize - 1, 8)}pt` }}>
+                <td className="relative py-0.5 pr-4 text-gray-400" colSpan={2} style={{ fontSize: `${Math.max(nettoFont.fontSize - 1, 8)}pt` }}>
                   {lohnLabel}
                   <button
-                    className="ml-2 opacity-0 group-hover/lohn:opacity-100 text-red-300 hover:text-red-500 transition-opacity"
+                    className={summaryEditButtonClass}
                     onClick={() => toggleHide("showLohnanteil")}
                     title="Lohnanteil ausblenden"
                     data-testid="button-hide-lohnanteil"
-                  >×</button>
+                  ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
                 </td>
               ) : (
                 <td className="py-0.5" colSpan={2}>
                   <button
-                    className="opacity-0 group-hover/lohn:opacity-100 text-[8px] text-blue-400 hover:text-blue-600 underline transition-opacity"
+                    className="opacity-0 group-hover/lohn:opacity-70 text-[8px] text-slate-400 hover:text-slate-700 transition-opacity"
                     onClick={() => toggleHide("showLohnanteil")}
                     data-testid="button-show-lohnanteil"
                   >+ Lohnanteil §35a anzeigen</button>
@@ -518,23 +522,23 @@ export function SummaryAndFooterBlock({
                 }}
                 data-testid={`skonto-row-${skontoIdx}`}
               >
-                <td className="text-gray-600 py-1" style={{ borderTop: `${ec.linienBreite}pt solid #e5e7eb`, paddingTop: "5px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }}>
+                <td className="text-slate-800 py-1" style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, paddingTop: "6px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }}>
                   <input
                     type="text"
                     value={skontoItem.title || ""}
                     onChange={(e) => skontoIdx >= 0 && onUpdateItem?.(skontoIdx, "title", e.target.value)}
-                    className="w-full bg-transparent border-none outline-none text-gray-600 leading-snug"
+                    className="w-full bg-transparent border-none outline-none text-slate-800 leading-snug"
                     placeholder="Skonto..."
                     data-testid={`skonto-title-${skontoIdx}`}
                   />
                 </td>
-                <td className="text-right tabular-nums py-1" style={{ borderTop: `${ec.linienBreite}pt solid #e5e7eb`, paddingTop: "5px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }} data-testid={`skonto-amount-${skontoIdx}`}>
+                <td className="relative py-1 pr-4 text-right tabular-nums text-slate-900" style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, paddingTop: "6px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }} data-testid={`skonto-amount-${skontoIdx}`}>
                   {fmtP(skontoAmount)}
                   <button
-                    className="ml-1 opacity-0 group-hover/skonto:opacity-100 text-red-300 hover:text-red-500 transition-opacity text-[10px]"
+                    className={summaryEditButtonClass}
                     onClick={(e) => { e.stopPropagation(); skontoIdx >= 0 && onRemoveItem?.(skontoIdx); }}
                     title="Skonto entfernen"
-                  >×</button>
+                  ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
                 </td>
               </tr>,
               <tr key={`${skontoItem._clientId || skontoItem.id}-hint`}>
@@ -543,7 +547,7 @@ export function SummaryAndFooterBlock({
                     type="text"
                     value={skontoItem.description || ""}
                     onChange={(e) => skontoIdx >= 0 && onUpdateItem?.(skontoIdx, "description", e.target.value)}
-                    className="w-full bg-transparent border-none outline-none text-right text-gray-700 leading-snug"
+                    className="w-full bg-transparent border-none outline-none text-right text-slate-800 leading-snug"
                     placeholder={`Zahlbetrag bei Skontoabzug ${fmtPercent(parseFloat(docForm.skontoPercent || "0"))}...`}
                     data-testid={`skonto-hint-${skontoIdx}`}
                   />

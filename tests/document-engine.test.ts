@@ -1051,6 +1051,28 @@ describe("document editor display polish guards", () => {
     assert.match(operationsSource, /parentClientId && parentJumboIndex != null\s+\? recalcJumboPrice\(updated, parentJumboIndex\)/);
     assert.doesNotMatch(rowSource, /className="w-full font-bold text-gray-900 bg-transparent/);
   });
+
+  it("keeps the visible document summary block calm and aligned", () => {
+    const a4Source = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/a4-components.tsx"), "utf8");
+    const summaryBlock = a4Source.slice(
+      a4Source.indexOf('data-testid="table-summary"'),
+      a4Source.indexOf("const verrechnungen: any[]"),
+    );
+
+    assert.match(a4Source, /const valueColPct = gpColumnPercent \? `\$\{gpColumnPercent\}%` : "18%"/);
+    assert.match(a4Source, /const labelColPct = gpColumnPercent \? `\$\{100 - gpColumnPercent\}%` : "82%"/);
+    assert.match(a4Source, /const summaryValueBase = "py-1\.5 text-right tabular-nums text-slate-900"/);
+    assert.match(a4Source, /import \{ X \} from "lucide-react"/);
+    assert.match(a4Source, /summaryEditButtonClass/);
+    assert.doesNotMatch(summaryBlock, /hover:text-blue-600/);
+    assert.doesNotMatch(summaryBlock, /hover:underline/);
+    assert.doesNotMatch(summaryBlock, />×<\/button>/);
+    assert.match(summaryBlock, /data-testid="text-summary-netto"/);
+    assert.match(summaryBlock, /data-testid="text-summary-brutto"/);
+    assert.match(summaryBlock, /text-slate-950/);
+    assert.match(summaryBlock, /data-testid=\{`skonto-amount-\$\{skontoIdx\}`\}/);
+    assert.match(summaryBlock, /data-testid=\{`skonto-hint-\$\{skontoIdx\}`\}/);
+  });
 });
 
 describe("invoice register finance flow guards", () => {
