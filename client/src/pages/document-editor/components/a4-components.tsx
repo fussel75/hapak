@@ -13,6 +13,13 @@ import { CustomerSearchOverlay } from "./menus";
 const qrCodeUrl =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='white'/%3E%3Cpath d='M6 6h18v18H6zM10 10v10h10V10zm30-4h18v18H40zM44 10v10h10V10zM6 40h18v18H6zM10 44v10h10V44zm30-10h6v6h-6zm8 0h10v6H48zm-14 8h6v16h-6zm8 8h6v8h-6zm8-8h8v6h-8zm0 12h8v4h-8z' fill='%23111111'/%3E%3C/svg%3E";
 
+function splitTrailingGermanAmount(text: string): { label: string; amount: string } {
+  const value = String(text || "").trim();
+  const match = value.match(/^(.*?)(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/);
+  if (!match) return { label: value, amount: "" };
+  return { label: match[1].trimEnd(), amount: match[2] };
+}
+
 function isLogoField(field: any): boolean {
   const id = String(field.id || "").toLowerCase();
   const content = String(field.inhalt || "").trim().toLowerCase();
@@ -370,8 +377,8 @@ export function SummaryAndFooterBlock({
   const valueColPct = gpColumnPercent ? `${gpColumnPercent}%` : "18%";
   const labelColPct = gpColumnPercent ? `${100 - gpColumnPercent}%` : "82%";
   const summaryCellBase = "py-1.5 text-slate-900";
-  const summaryValueBase = "py-1.5 text-right tabular-nums text-slate-900";
-  const summaryEditButtonClass = "absolute right-0 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
+  const summaryValueBase = "py-1.5 pr-0.5 pl-0 text-right tabular-nums text-slate-900";
+  const summaryEditButtonClass = "absolute -right-3 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
 
   const toggleHide = (field: "hideNetto" | "hideMwst" | "hideGesamt" | "showLohnanteil") => {
     setDocForm((f: any) => ({ ...f, [field]: !f[field] }));
@@ -455,7 +462,7 @@ export function SummaryAndFooterBlock({
                   data-testid="button-hide-mwst"
                 ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
               </td>
-              <td className="text-right tabular-nums text-slate-600" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }} data-testid="text-summary-mwst">
+              <td className="pr-0.5 pl-0 text-right tabular-nums text-slate-600" style={{ paddingTop: `${ec.abstandZeilen * 0.5}px`, paddingBottom: `${ec.abstandZeilen * 0.5}px`, ...(needsTopBorderOnMwst ? { borderTop: `${ec.linienBreite}pt solid #d1d5db` } : {}) }} data-testid="text-summary-mwst">
                 {fmtP(taxAmount)}
               </td>
             </tr>
@@ -475,7 +482,7 @@ export function SummaryAndFooterBlock({
                     data-testid="button-hide-gesamt"
                   ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
                 </td>
-                <td className="text-right tabular-nums text-slate-950" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }} data-testid="text-summary-brutto">
+                <td className="pr-0.5 pl-0 text-right tabular-nums text-slate-950" style={{ borderTop: topBorder, borderBottom: bottomBorder, paddingTop: "6px", paddingBottom: "6px", fontFamily: gesamtFont.fontFamily, fontSize: `${gesamtFont.fontSize}pt`, fontWeight: gesamtFont.fontWeight }} data-testid="text-summary-brutto">
                   {fmtP(par13bActive ? netTotal : grossTotal)}
                 </td>
               </tr>
@@ -507,6 +514,7 @@ export function SummaryAndFooterBlock({
           {skontoImDokument && !(docForm.abschlagVerrechnungen?.length > 0) && skontoItems && skontoItems.length > 0 && skontoItems.map((skontoItem: any) => {
             const skontoIdx = allItems ? allItems.indexOf(skontoItem) : -1;
             const skontoAmount = parseFloat(skontoItem.totalPrice || "0");
+            const skontoHint = splitTrailingGermanAmount(skontoItem.description || "");
             const isFocused = focusedRow !== undefined && focusedRow === skontoIdx;
             const isSelected = selectedRows?.has(skontoIdx);
             return [
@@ -532,7 +540,7 @@ export function SummaryAndFooterBlock({
                     data-testid={`skonto-title-${skontoIdx}`}
                   />
                 </td>
-                <td className="relative py-1 pr-4 text-right tabular-nums text-slate-900" style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, paddingTop: "6px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }} data-testid={`skonto-amount-${skontoIdx}`}>
+                <td className="relative py-1 pr-0.5 pl-0 text-right tabular-nums text-slate-900" style={{ borderTop: `${ec.linienBreite}pt solid #d1d5db`, paddingTop: "6px", paddingBottom: "3px", fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "13pt" }} data-testid={`skonto-amount-${skontoIdx}`}>
                   {fmtP(skontoAmount)}
                   <button
                     className={summaryEditButtonClass}
@@ -542,15 +550,18 @@ export function SummaryAndFooterBlock({
                 </td>
               </tr>,
               <tr key={`${skontoItem._clientId || skontoItem.id}-hint`}>
-                <td colSpan={2} className="text-right pt-0 pb-1.5" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "12pt" }}>
+                <td className="text-right pt-0 pb-1.5" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "12pt" }}>
                   <input
                     type="text"
-                    value={skontoItem.description || ""}
-                    onChange={(e) => skontoIdx >= 0 && onUpdateItem?.(skontoIdx, "description", e.target.value)}
+                    value={skontoHint.label}
+                    onChange={(e) => skontoIdx >= 0 && onUpdateItem?.(skontoIdx, "description", `${e.target.value}${skontoHint.amount ? ` ${skontoHint.amount}` : ""}`)}
                     className="w-full bg-transparent border-none outline-none text-right text-slate-800 leading-snug"
                     placeholder={`Zahlbetrag bei Skontoabzug ${fmtPercent(parseFloat(docForm.skontoPercent || "0"))}...`}
                     data-testid={`skonto-hint-${skontoIdx}`}
                   />
+                </td>
+                <td className="pr-0.5 pl-0 text-right tabular-nums text-slate-800 pt-0 pb-1.5" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt`, lineHeight: "12pt" }} data-testid={`skonto-hint-amount-${skontoIdx}`}>
+                  {skontoHint.amount}
                 </td>
               </tr>,
             ];

@@ -1061,7 +1061,9 @@ describe("document editor display polish guards", () => {
 
     assert.match(a4Source, /const valueColPct = gpColumnPercent \? `\$\{gpColumnPercent\}%` : "18%"/);
     assert.match(a4Source, /const labelColPct = gpColumnPercent \? `\$\{100 - gpColumnPercent\}%` : "82%"/);
-    assert.match(a4Source, /const summaryValueBase = "py-1\.5 text-right tabular-nums text-slate-900"/);
+    assert.match(a4Source, /function splitTrailingGermanAmount/);
+    assert.match(a4Source, /const summaryValueBase = "py-1\.5 pr-0\.5 pl-0 text-right tabular-nums text-slate-900"/);
+    assert.match(a4Source, /const summaryEditButtonClass = "absolute -right-3/);
     assert.match(a4Source, /import \{ X \} from "lucide-react"/);
     assert.match(a4Source, /summaryEditButtonClass/);
     assert.doesNotMatch(summaryBlock, /hover:text-blue-600/);
@@ -1072,6 +1074,8 @@ describe("document editor display polish guards", () => {
     assert.match(summaryBlock, /text-slate-950/);
     assert.match(summaryBlock, /data-testid=\{`skonto-amount-\$\{skontoIdx\}`\}/);
     assert.match(summaryBlock, /data-testid=\{`skonto-hint-\$\{skontoIdx\}`\}/);
+    assert.match(summaryBlock, /data-testid=\{`skonto-hint-amount-\$\{skontoIdx\}`\}/);
+    assert.doesNotMatch(summaryBlock, /<td colSpan=\{2\} className="text-right pt-0 pb-1\.5"/);
   });
 });
 
