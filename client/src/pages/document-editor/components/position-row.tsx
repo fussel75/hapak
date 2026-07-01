@@ -75,7 +75,7 @@ const structureTitleInputClass =
 const structureSubtitleInputClass =
   "w-full bg-transparent border-0 outline-none rounded px-1 -mx-1 focus:bg-cyan-50/55 text-gray-900 font-semibold leading-[1.35]";
 const structurePositionClass = "font-semibold text-gray-800 leading-[1.35]";
-const titleSumLabelClass = "font-semibold text-gray-800 cursor-pointer hover:text-blue-700 hover:underline";
+const titleSumLabelClass = "font-semibold text-gray-900 cursor-pointer hover:text-gray-950";
 const normalSumLabelClass = "font-semibold text-gray-900";
 
 export const PositionRow = memo(function PositionRow({

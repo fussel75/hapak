@@ -1017,6 +1017,9 @@ describe("document editor display polish guards", () => {
     assert.match(rowSource, /placeholder="Text eingeben\.\.\."\s+onFocus=\{onFocus\}/);
     assert.match(rowSource, /const structurePadding = isGruppe \? "py-1\.5" : "py-2"/);
     assert.match(rowSource, /const sumLabelClass = isTitelS \? titleSumLabelClass : normalSumLabelClass/);
+    assert.match(rowSource, /const titleSumLabelClass = "font-semibold text-gray-900 cursor-pointer hover:text-gray-950"/);
+    assert.doesNotMatch(rowSource, /titleSumLabelClass = .*hover:text-blue/);
+    assert.doesNotMatch(rowSource, /titleSumLabelClass = .*hover:underline/);
     assert.match(rowSource, /data-testid=\{`button-jumbo-add-\$\{index\}`\}/);
     assert.match(rowSource, /aria-label="Jumbo-Unterposition anlegen"/);
     assert.match(rowSource, /<Plus className="h-3 w-3" aria-hidden="true" \/>/);
