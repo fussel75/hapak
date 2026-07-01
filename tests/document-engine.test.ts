@@ -1687,6 +1687,9 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /2-fach Schukosteckdose/);
     assert.match(smokeScript, /Fremdleistungsanteil aus HAPAK-JUMBO/);
     assert.match(smokeScript, /hasBrokenTitleSumText/);
+    assert.match(smokeScript, /rightDelta > 2/);
+    assert.match(smokeScript, /pageOverflowDeltas\.some\(\(delta\) => delta > 1\)/);
+    assert.match(smokeScript, /skonto-hint-amount-/);
     assert.match(smokeScript, /firstDocument\.id/);
     assert.match(smokeScript, /pdf basis-dokument/);
     assert.match(smokeScript, /application\/pdf/);

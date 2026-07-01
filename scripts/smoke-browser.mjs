@@ -381,6 +381,23 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
       .map((row) => (row.textContent || "").replace(/\s+/g, " ").trim())
       .filter(Boolean);
     const socketRow = rowLines.find((text) => text.includes("2-fach Schukosteckdose")) || "";
+    const amountSelectors = [
+      '[data-testid="text-summary-netto"]',
+      '[data-testid="text-summary-mwst"]',
+      '[data-testid="text-summary-brutto"]',
+      '[data-testid^="skonto-amount-"]',
+      '[data-testid^="skonto-hint-amount-"]',
+    ];
+    const amountRights = amountSelectors.flatMap((selector) =>
+      Array.from(document.querySelectorAll(selector)).map((element) =>
+        Math.round(element.getBoundingClientRect().right * 10) / 10,
+      ),
+    );
+    const rightDelta =
+      amountRights.length > 1 ? Math.max(...amountRights) - Math.min(...amountRights) : 0;
+    const pageOverflowDeltas = Array.from(document.querySelectorAll(".a4-page")).map(
+      (element) => element.scrollWidth - element.clientWidth,
+    );
     return {
       hasSyntheticJumboLabor: bodyText.includes("Lohnanteil aus HAPAK-JUMBO") || bodyText.includes("Fremdleistungsanteil aus HAPAK-JUMBO"),
       hasInvoiceTitle: bodyText.includes("Rechnung 26-00058"),
@@ -390,6 +407,8 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
       hasSocketUnitPrice: socketRow.includes("156,15"),
       hasSocketTotalPrice: socketRow.includes("874,44"),
       hasBrokenTitleSumText: bodyText.includes("Titelumme"),
+      rightDelta: Math.round(rightDelta * 10) / 10,
+      pageOverflowDeltas,
     };
   });
 
@@ -400,7 +419,9 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
     !visualState.hasSocketNumber ||
     !visualState.hasSocketUnitPrice ||
     !visualState.hasSocketTotalPrice ||
-    visualState.hasBrokenTitleSumText
+    visualState.hasBrokenTitleSumText ||
+    visualState.rightDelta > 2 ||
+    visualState.pageOverflowDeltas.some((delta) => delta > 1)
   ) {
     throw new Error(`imported HAPAK invoice visual guards: sichtbare Rechnung 26-00058 unerwartet ${JSON.stringify(visualState)}`);
   }
