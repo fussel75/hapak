@@ -1075,10 +1075,12 @@ describe("document editor display polish guards", () => {
     assert.match(a4Source, /const summaryValueBase = "py-1\.5 pr-0\.5 pl-0 text-right tabular-nums text-slate-900"/);
     assert.match(a4Source, /const summaryEditButtonClass = "absolute right-0/);
     assert.doesNotMatch(a4Source, /summaryEditButtonClass = "absolute -right-/);
+    assert.match(a4Source, /const hiddenSummaryRestoreClass = "rounded-sm px-0\.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"/);
     assert.match(a4Source, /import \{ X \} from "lucide-react"/);
     assert.match(a4Source, /summaryEditButtonClass/);
     assert.doesNotMatch(summaryBlock, /hover:text-blue-600/);
     assert.doesNotMatch(summaryBlock, /hover:underline/);
+    assert.doesNotMatch(summaryBlock, /text-blue-400 hover:text-blue-600 underline/);
     assert.doesNotMatch(summaryBlock, />×<\/button>/);
     assert.match(summaryBlock, /data-testid="text-summary-netto"/);
     assert.match(summaryBlock, /data-testid="text-summary-brutto"/);

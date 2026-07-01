@@ -379,6 +379,7 @@ export function SummaryAndFooterBlock({
   const summaryCellBase = "py-1.5 text-slate-900";
   const summaryValueBase = "py-1.5 pr-0.5 pl-0 text-right tabular-nums text-slate-900";
   const summaryEditButtonClass = "absolute right-0 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity text-slate-300 hover:text-red-500 group-hover:opacity-70";
+  const hiddenSummaryRestoreClass = "rounded-sm px-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800";
 
   const toggleHide = (field: "hideNetto" | "hideMwst" | "hideGesamt" | "showLohnanteil") => {
     setDocForm((f: any) => ({ ...f, [field]: !f[field] }));
@@ -397,21 +398,21 @@ export function SummaryAndFooterBlock({
           <span>Ausgeblendet:</span>
           {effectiveHideNetto && (
             <button
-              className="text-blue-400 hover:text-blue-600 underline"
+              className={hiddenSummaryRestoreClass}
               onClick={() => toggleHide("hideNetto")}
               data-testid="button-restore-netto"
             >Nettosumme</button>
           )}
           {docForm.hideMwst && (
             <button
-              className="text-blue-400 hover:text-blue-600 underline"
+              className={hiddenSummaryRestoreClass}
               onClick={() => toggleHide("hideMwst")}
               data-testid="button-restore-mwst"
             >Umsatzsteuer</button>
           )}
           {docForm.hideGesamt && (
             <button
-              className="text-blue-400 hover:text-blue-600 underline"
+              className={hiddenSummaryRestoreClass}
               onClick={() => toggleHide("hideGesamt")}
               data-testid="button-restore-gesamt"
             >Gesamtsumme</button>
