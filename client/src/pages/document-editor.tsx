@@ -1663,7 +1663,7 @@ export default function DocumentEditorPage() {
       )}
 
       {/* ── MAIN CONTENT: A4 CANVAS ─────────────────────────────────────────── */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-auto work-surface print:bg-white print:overflow-visible" spellCheck={spellCheck} style={{ padding: "34px 28px 56px" }} onMouseDown={(e) => {
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden work-surface print:bg-white print:overflow-visible" data-testid="document-work-surface" spellCheck={spellCheck} style={{ padding: "34px 28px 56px" }} onMouseDown={(e) => {
         const target = e.target as HTMLElement;
         if (target.closest("[data-row]") || target.closest("[data-float-toolbar]") || target.closest("[data-select-bar]")) return;
         if (selectedRows.size > 0) setSelectedRows(new Set());

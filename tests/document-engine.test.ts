@@ -1033,6 +1033,9 @@ describe("document editor display polish guards", () => {
     assert.match(editorSource, /docForm\.jumboListenAnzeigen === false \? new Set<string>\(\) : expandedJumbos/);
     assert.match(editorSource, /paginateDocument\(items, resolvedTemplate, visibleExpandedJumbos/);
     assert.doesNotMatch(editorSource, /paginateDocument\(items, resolvedTemplate, expandedJumbos/);
+    assert.match(editorSource, /data-testid="document-work-surface"/);
+    assert.match(editorSource, /overflow-y-auto overflow-x-hidden work-surface/);
+    assert.doesNotMatch(editorSource, /overflow-y-auto overflow-x-auto work-surface/);
     assert.match(editorSource, /const childCount = getJumboChildCount\(index\)/);
     assert.match(editorSource, /if \(childCount === 0\)/);
     assert.doesNotMatch(editorSource, /childCount === 0 && !activeJumbo/);
@@ -1698,6 +1701,9 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /hasBrokenTitleSumText/);
     assert.match(smokeScript, /rightDelta > 2/);
     assert.match(smokeScript, /pageOverflowDeltas\.some\(\(delta\) => delta > 1\)/);
+    assert.match(smokeScript, /document-work-surface/);
+    assert.match(smokeScript, /workSurfaceOverflowX !== "hidden"/);
+    assert.match(smokeScript, /workSurfaceHasVisibleHorizontalScrollbar/);
     assert.match(smokeScript, /skonto-hint-amount-/);
     assert.match(smokeScript, /firstDocument\.id/);
     assert.match(smokeScript, /pdf basis-dokument/);

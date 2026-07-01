@@ -398,6 +398,12 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
     const pageOverflowDeltas = Array.from(document.querySelectorAll(".a4-page")).map(
       (element) => element.scrollWidth - element.clientWidth,
     );
+    const workSurface = document.querySelector('[data-testid="document-work-surface"]');
+    const workSurfaceStyle = workSurface ? getComputedStyle(workSurface) : null;
+    const workSurfaceHasVisibleHorizontalScrollbar =
+      !!workSurface &&
+      workSurface.scrollWidth > workSurface.clientWidth + 1 &&
+      ["auto", "scroll"].includes(workSurfaceStyle?.overflowX || "");
     return {
       hasSyntheticJumboLabor: bodyText.includes("Lohnanteil aus HAPAK-JUMBO") || bodyText.includes("Fremdleistungsanteil aus HAPAK-JUMBO"),
       hasInvoiceTitle: bodyText.includes("Rechnung 26-00058"),
@@ -409,6 +415,8 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
       hasBrokenTitleSumText: bodyText.includes("Titelumme"),
       rightDelta: Math.round(rightDelta * 10) / 10,
       pageOverflowDeltas,
+      workSurfaceOverflowX: workSurfaceStyle?.overflowX || "",
+      workSurfaceHasVisibleHorizontalScrollbar,
     };
   });
 
@@ -421,7 +429,9 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
     !visualState.hasSocketTotalPrice ||
     visualState.hasBrokenTitleSumText ||
     visualState.rightDelta > 2 ||
-    visualState.pageOverflowDeltas.some((delta) => delta > 1)
+    visualState.pageOverflowDeltas.some((delta) => delta > 1) ||
+    visualState.workSurfaceOverflowX !== "hidden" ||
+    visualState.workSurfaceHasVisibleHorizontalScrollbar
   ) {
     throw new Error(`imported HAPAK invoice visual guards: sichtbare Rechnung 26-00058 unerwartet ${JSON.stringify(visualState)}`);
   }
