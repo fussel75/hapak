@@ -404,6 +404,9 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
       !!workSurface &&
       workSurface.scrollWidth > workSurface.clientWidth + 1 &&
       ["auto", "scroll"].includes(workSurfaceStyle?.overflowX || "");
+    const titleSumLooksLikeLink = Array.from(document.querySelectorAll('[data-testid^="btn-titelsumme-detail-"]')).some(
+      (element) => /\bhover:underline\b|\bhover:text-blue/.test(element.getAttribute("class") || ""),
+    );
     return {
       hasSyntheticJumboLabor: bodyText.includes("Lohnanteil aus HAPAK-JUMBO") || bodyText.includes("Fremdleistungsanteil aus HAPAK-JUMBO"),
       hasInvoiceTitle: bodyText.includes("Rechnung 26-00058"),
@@ -417,6 +420,7 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
       pageOverflowDeltas,
       workSurfaceOverflowX: workSurfaceStyle?.overflowX || "",
       workSurfaceHasVisibleHorizontalScrollbar,
+      titleSumLooksLikeLink,
     };
   });
 
@@ -431,7 +435,8 @@ async function assertImportedHapakInvoiceVisualGuards(page) {
     visualState.rightDelta > 2 ||
     visualState.pageOverflowDeltas.some((delta) => delta > 1) ||
     visualState.workSurfaceOverflowX !== "hidden" ||
-    visualState.workSurfaceHasVisibleHorizontalScrollbar
+    visualState.workSurfaceHasVisibleHorizontalScrollbar ||
+    visualState.titleSumLooksLikeLink
   ) {
     throw new Error(`imported HAPAK invoice visual guards: sichtbare Rechnung 26-00058 unerwartet ${JSON.stringify(visualState)}`);
   }

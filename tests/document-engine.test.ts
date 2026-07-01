@@ -1707,6 +1707,9 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /document-work-surface/);
     assert.match(smokeScript, /workSurfaceOverflowX !== "hidden"/);
     assert.match(smokeScript, /workSurfaceHasVisibleHorizontalScrollbar/);
+    assert.match(smokeScript, /titleSumLooksLikeLink/);
+    assert.match(smokeScript, /btn-titelsumme-detail-/);
+    assert.match(smokeScript, /hover:underline/);
     assert.match(smokeScript, /skonto-hint-amount-/);
     assert.match(smokeScript, /firstDocument\.id/);
     assert.match(smokeScript, /pdf basis-dokument/);
