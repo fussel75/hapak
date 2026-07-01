@@ -1058,6 +1058,10 @@ describe("document editor display polish guards", () => {
       a4Source.indexOf('data-testid="table-summary"'),
       a4Source.indexOf("const verrechnungen: any[]"),
     );
+    const verrechnungSkontoBlock = a4Source.slice(
+      a4Source.indexOf("skontoImDokument && hasVerrechnungen && skontoItems"),
+      a4Source.indexOf("{showKalk &&"),
+    );
 
     assert.match(a4Source, /const valueColPct = gpColumnPercent \? `\$\{gpColumnPercent\}%` : "18%"/);
     assert.match(a4Source, /const labelColPct = gpColumnPercent \? `\$\{100 - gpColumnPercent\}%` : "82%"/);
@@ -1077,6 +1081,11 @@ describe("document editor display polish guards", () => {
     assert.match(summaryBlock, /data-testid=\{`skonto-hint-\$\{skontoIdx\}`\}/);
     assert.match(summaryBlock, /data-testid=\{`skonto-hint-amount-\$\{skontoIdx\}`\}/);
     assert.doesNotMatch(summaryBlock, /<td colSpan=\{2\} className="text-right pt-0 pb-1\.5"/);
+    assert.match(verrechnungSkontoBlock, /Zahlbetrag bei Skontoabzug \{fmtPercent\(parseFloat\(docForm\.skontoPercent \|\| "0"\)\)\}/);
+    assert.match(verrechnungSkontoBlock, /data-testid=\{`skonto-hint-amount-\$\{skontoIdx\}`\}/);
+    assert.match(verrechnungSkontoBlock, /<X className="h-2\.5 w-2\.5" aria-hidden="true" \/>/);
+    assert.doesNotMatch(verrechnungSkontoBlock, /Zahlbetrag bei Skontoabzug \{fmtPercent\(parseFloat\(docForm\.skontoPercent \|\| "0"\)\)\} \{fmtCurrency\(zahlbetragNachSkonto\)\}/);
+    assert.doesNotMatch(verrechnungSkontoBlock, />×<\/button>/);
   });
 });
 

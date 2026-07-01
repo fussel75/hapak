@@ -723,29 +723,31 @@ export function SummaryAndFooterBlock({
                           }}
                           data-testid={`skonto-row-${skontoIdx}`}
                         >
-                          <td className="text-gray-600 py-1">
+                          <td className="text-slate-800 py-1">
                             <input
                               type="text"
                               value={skontoItem.title || ""}
                               onChange={(e) => skontoIdx >= 0 && onUpdateItem?.(skontoIdx, "title", e.target.value)}
-                              className="w-full bg-transparent border-none outline-none text-gray-600"
+                              className="w-full bg-transparent border-none outline-none text-slate-800"
                               placeholder="Skonto..."
                               data-testid={`skonto-title-${skontoIdx}`}
                             />
                           </td>
-                          <td className="text-right tabular-nums py-1 whitespace-nowrap" data-testid={`skonto-amount-${skontoIdx}`}>
+                          <td className="relative pr-0.5 pl-0 text-right tabular-nums py-1 whitespace-nowrap text-slate-900" data-testid={`skonto-amount-${skontoIdx}`}>
                             {fmtCurrency(skontoOnZahlbetrag)}
                             <button
-                              className="ml-1 opacity-0 group-hover/skonto:opacity-100 text-red-300 hover:text-red-500 transition-opacity text-[10px]"
+                              className={summaryEditButtonClass}
                               onClick={(e) => { e.stopPropagation(); skontoIdx >= 0 && onRemoveItem?.(skontoIdx); }}
                               title="Skonto entfernen"
-                            >×</button>
+                            ><X className="h-2.5 w-2.5" aria-hidden="true" /></button>
                           </td>
                         </tr>,
                         <tr key={`${skontoItem._clientId || skontoItem.id}-hint`}>
-                          <td className="py-0.5" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt` }}></td>
-                          <td className="text-right tabular-nums py-0.5" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt` }}>
-                            Zahlbetrag bei Skontoabzug {fmtPercent(parseFloat(docForm.skontoPercent || "0"))} {fmtCurrency(zahlbetragNachSkonto)}
+                          <td className="text-right py-0.5 text-slate-800" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt` }} data-testid={`skonto-hint-${skontoIdx}`}>
+                            Zahlbetrag bei Skontoabzug {fmtPercent(parseFloat(docForm.skontoPercent || "0"))}
+                          </td>
+                          <td className="pr-0.5 pl-0 text-right tabular-nums py-0.5 text-slate-800" style={{ fontFamily: skontoFont.fontFamily, fontSize: `${skontoFont.fontSize}pt` }} data-testid={`skonto-hint-amount-${skontoIdx}`}>
+                            {fmtCurrency(zahlbetragNachSkonto)}
                           </td>
                         </tr>,
                       ];
