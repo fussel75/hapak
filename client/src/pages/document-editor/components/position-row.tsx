@@ -867,7 +867,7 @@ export const PositionRow = memo(function PositionRow({
             />
             </div>
           </div>
-          {(focused || selected || jumboMenuOpen) && (
+          {isJumbo && !isSubItem && (focused || selected || jumboMenuOpen) && (
           <div className="absolute right-1 top-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <button
               type="button"
@@ -884,7 +884,7 @@ export const PositionRow = memo(function PositionRow({
             </button>
           </div>
           )}
-          {jumboMenuOpen && (
+          {isJumbo && !isSubItem && jumboMenuOpen && (
             <div
               className="absolute right-1 top-full z-50 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 text-xs shadow-lg"
               onClick={(e) => e.stopPropagation()}

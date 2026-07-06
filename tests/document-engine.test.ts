@@ -1024,7 +1024,8 @@ describe("document editor display polish guards", () => {
     assert.match(rowSource, /aria-label="Jumbo-Unterposition anlegen"/);
     assert.match(rowSource, /<Plus className="h-3 w-3" aria-hidden="true" \/>/);
     assert.doesNotMatch(rowSource, />\s*\+\s*Anh.ngen\s*</);
-    assert.match(rowSource, /\(focused \|\| selected \|\| jumboMenuOpen\) &&/);
+    assert.match(rowSource, /isJumbo && !isSubItem && \(focused \|\| selected \|\| jumboMenuOpen\) &&/);
+    assert.match(rowSource, /isJumbo && !isSubItem && jumboMenuOpen &&/);
     assert.match(rowSource, /data-testid="jumbo-menu-manuell"/);
     const priceDialogSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/dialogs/price-dialog.tsx"), "utf8");
     assert.match(priceDialogSource, /const calculationRows = children\.length > 0 \? children : parent \? \[parent\] : \[\]/);
