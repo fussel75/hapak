@@ -136,7 +136,7 @@ const DUNNING_COLORS: Record<number, string> = {
 };
 const DEFAULT_FEES: Record<number, string> = { 1: "0,00", 2: "5,00", 3: "10,00" };
 const DEFAULT_TEXTS: Record<number, string> = {
-  1: "Sicher ist es Ihrer Aufmerksamkeit entgangen, dass folgende Rechnung noch nicht beglichen wurde. Wir bitten Sie, den ausstehenden Betrag innerhalb von 14 Tagen auf unser Konto zu überweisen.",
+  1: "Sicher ist es Ihrer Aufmerksamkeit entgangen, dass folgende Rechnung noch nicht beglichen wurde. Wir bitten Sie, den ausstehenden Betrag innerhalb von 14 Tagen auf unser Konto zu ueberweisen.",
   2: "Trotz unserer Zahlungserinnerung ist folgende Rechnung noch offen. Wir bitten Sie dringend um umgehende Begleichung des ausstehenden Betrages.",
   3: "Letztmalig fordern wir Sie auf, den ausstehenden Betrag zu begleichen. Sollte der Betrag nicht innerhalb von 14 Tagen auf unserem Konto eingehen, sehen wir uns gezwungen, weitere Schritte einzuleiten.",
 };
@@ -171,7 +171,7 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fibu"] });
       queryClient.invalidateQueries({ queryKey: ["/api/outgoing-invoices-fibu"] });
-      toast({ title: "Rechnung gelöscht" });
+      toast({ title: "Rechnung geloescht" });
       onClose();
     },
     onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
@@ -193,7 +193,7 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
   if (!data) return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
       <PanelRightOpen className="h-12 w-12 mb-3 opacity-20" />
-      <p className="text-sm">Rechnung wählen um Details zu sehen</p>
+      <p className="text-sm">Rechnung waehlen um Details zu sehen</p>
     </div>
   );
 
@@ -212,7 +212,7 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
           </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">
             <a className="hover:text-primary hover:underline cursor-pointer" onClick={() => navigate(`/adressen?search=${encodeURIComponent(h.adrNr)}`)} data-testid="link-detail-customer">{h.adrSuch}</a>
-            {" — "}{h.betreff}
+            {" - "}{h.betreff}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} data-testid="button-close-detail"><X className="h-4 w-4" /></Button>
@@ -222,7 +222,7 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
         <div className="p-3 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <InfoField label="Belegdatum" value={fmtDate(h.belegdat)} />
-            <InfoField label="Fällig" value={fmtDate(h.faelligdat)} />
+            <InfoField label="Faellig" value={fmtDate(h.faelligdat)} />
             <InfoField label="Erfasst" value={fmtDate(h.erfasstdat)} />
             <InfoField label="Zahldatum" value={fmtDate(h.zahldat)} />
           </div>
@@ -245,25 +245,25 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
             <div className="grid grid-cols-3 gap-2 bg-muted/30 rounded-lg p-2.5 text-xs">
               <InfoField label="Minderung" value={fmtCurrency(h.minderung)} />
               <InfoField label="Gutschrift" value={fmtCurrency(h.gutschrift)} />
-              <InfoField label="Kürzung" value={fmtCurrency(h.kuerzung)} />
+              <InfoField label="Kuerzung" value={fmtCurrency(h.kuerzung)} />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <InfoField label="Personenkonto" value={h.kontoB || "—"} />
-            <InfoField label="Erlöskonto" value={h.kontoG || "—"} />
+            <InfoField label="Personenkonto" value={h.kontoB || "-"} />
+            <InfoField label="Erloeskonto" value={h.kontoG || "-"} />
             <div>
               <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">Projekt/KTR</span>
               {h.ktr ? (
                 <a className="text-xs font-medium hover:text-primary hover:underline cursor-pointer" onClick={() => navigate(`/projekte?search=${encodeURIComponent(h.ktr)}`)} data-testid="link-detail-projekt">{fmtDocNumber(h.ktr)}</a>
-              ) : <span className="text-xs font-medium">—</span>}
+              ) : <span className="text-xs font-medium">-</span>}
             </div>
-            <InfoField label="Kostenstelle" value={h.kst || "—"} />
+            <InfoField label="Kostenstelle" value={h.kst || "-"} />
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap text-xs">
             <Badge variant="outline" className="text-[10px]">
-              {h.bezahlflag === 0 ? "Offen" : h.bezahlflag === 1 ? "Teilzahlung" : h.bezahlflag === 2 ? "Bezahlt" : "Überzahlung"}
+              {h.bezahlflag === 0 ? "Offen" : h.bezahlflag === 1 ? "Teilzahlung" : h.bezahlflag === 2 ? "Bezahlt" : "Ueberzahlung"}
             </Badge>
             {h.stornoflag === 2 && <Badge className="bg-gray-200 text-gray-600 text-[10px]">Storniert</Badge>}
             {h.mahnflag > 0 && <Badge className="bg-orange-100 text-orange-800 text-[10px]">Mahnstufe {h.mahnflag}</Badge>}
@@ -298,7 +298,7 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
                 variant="outline"
                 className="flex-1"
                 disabled
-                title="Nur für im System erstellte Rechnungen"
+                title="Nur fuer im System erstellte Rechnungen"
                 data-testid="button-edit-detail"
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -315,21 +315,21 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
                 className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={() => setDeleteConfirm(true)}
                 disabled={h.bezahlflag === 2 || h.bezahlflag === 3}
-                title={h.bezahlflag >= 2 ? "Bezahlte Rechnungen können nicht gelöscht werden" : undefined}
+                title={h.bezahlflag >= 2 ? "Bezahlte Rechnungen koennen nicht geloescht werden" : undefined}
                 data-testid="button-delete-detail"
               >
                 <X className="h-4 w-4 mr-2" />
-                Rechnung löschen
+                Rechnung loeschen
               </Button>
             ) : (
               <div className="flex gap-2 items-center bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">
-                <span className="text-xs text-red-700 flex-1">Wirklich löschen?</span>
+                <span className="text-xs text-red-700 flex-1">Wirklich loeschen?</span>
                 <Button size="sm" variant="destructive" className="h-7 text-xs"
                   disabled={deleteMutation.isPending}
                   onClick={() => deleteMutation.mutate(reId)}
                   data-testid="button-confirm-delete"
                 >
-                  {deleteMutation.isPending ? "Löscht..." : "Ja, löschen"}
+                  {deleteMutation.isPending ? "Loescht..." : "Ja, loeschen"}
                 </Button>
                 <Button size="sm" variant="outline" className="h-7 text-xs"
                   onClick={() => setDeleteConfirm(false)}
@@ -370,8 +370,8 @@ function DetailPanel({ reId, invoice, onClose }: { reId: number; invoice?: FibuI
                       <TableRow key={z.id}>
                         <TableCell className="text-[11px] py-1 px-2">{fmtDate(z.zahldat || z.belegdat)}</TableCell>
                         <TableCell className="text-[11px] py-1 px-2 text-right font-medium">{fmtCurrency(z.zahlung)}</TableCell>
-                        <TableCell className="text-[11px] py-1 px-2 text-right">{z.skBetrag > 0 ? fmtCurrency(z.skBetrag) : "—"}</TableCell>
-                        <TableCell className="text-[10px] py-1 px-2 font-mono">{z.kontoG || "—"}</TableCell>
+                        <TableCell className="text-[11px] py-1 px-2 text-right">{z.skBetrag > 0 ? fmtCurrency(z.skBetrag) : "-"}</TableCell>
+                        <TableCell className="text-[10px] py-1 px-2 font-mono">{z.kontoG || "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -441,7 +441,7 @@ function InfoField({ label, value, bold, className }: { label: string; value: st
   return (
     <div>
       <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
-      <p className={`text-sm ${bold ? "font-semibold" : ""} ${className || ""}`}>{value || "—"}</p>
+      <p className={`text-sm ${bold ? "font-semibold" : ""} ${className || ""}`}>{value || "-"}</p>
     </div>
   );
 }
@@ -498,14 +498,14 @@ function StatisticsPanel({ art, dateFrom, dateTo }: { art: string; dateFrom?: st
           <CardHeader className="pb-2 pt-3 px-4">
             <CardTitle className="text-sm flex items-center gap-2">
               <Receipt className="h-4 w-4" />
-              Statistik (Übersicht Umsatz/Forderungen)
+              Statistik (Uebersicht Umsatz/Forderungen)
             </CardTitle>
             <p className="text-xs text-muted-foreground">Belegdatum {periodLabel}</p>
           </CardHeader>
           <CardContent className="px-4 pb-3">
             <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
               <div className="flex justify-between text-sm py-0.5">
-                <span>Erlöse</span>
+                <span>Erloese</span>
                 <span className="font-semibold tabular-nums" data-testid="umsatz-erloese">{fmtCurrency(u.erloese)}</span>
               </div>
               <div />
@@ -579,7 +579,7 @@ function StatisticsPanel({ art, dateFrom, dateTo }: { art: string; dateFrom?: st
             {data.byCustomer.slice(0, 15).map(c => (
               <div key={c.name} className="flex items-center justify-between text-sm" data-testid={`stat-customer-${c.name}`}>
                 <span className="truncate flex-1 font-medium">{c.name}</span>
-                <span className="text-muted-foreground tabular-nums ml-2">{c.count}×</span>
+                <span className="text-muted-foreground tabular-nums ml-2">{c.count}x</span>
                 <span className="tabular-nums ml-3 w-24 text-right">{fmtCurrency(c.brutto)}</span>
               </div>
             ))}
@@ -589,7 +589,7 @@ function StatisticsPanel({ art, dateFrom, dateTo }: { art: string; dateFrom?: st
 
       {data.byMonth.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Monatliche Umsätze</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Monatliche Umsaetze</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               {data.byMonth.map(m => (
@@ -606,12 +606,12 @@ function StatisticsPanel({ art, dateFrom, dateTo }: { art: string; dateFrom?: st
 
       {data.byKonto.length > 1 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Nach Erlöskonto</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Nach Erloeskonto</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {data.byKonto.map(k => (
               <div key={k.konto} className="flex items-center justify-between text-sm">
-                <span className="font-mono text-xs">{k.konto || "—"}</span>
-                <span className="text-muted-foreground">{k.count}×</span>
+                <span className="font-mono text-xs">{k.konto || "-"}</span>
+                <span className="text-muted-foreground">{k.count}x</span>
                 <span className="tabular-nums font-medium">{fmtCurrency(k.netto)}</span>
               </div>
             ))}
@@ -740,7 +740,7 @@ export default function RechnungsbuchPage() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/open-items"] });
-      toast({ title: "Mahnlauf abgeschlossen", description: `${data.processed} Mahnungen erstellt${data.skipped > 0 ? `, ${data.skipped} übersprungen` : ""}` });
+      toast({ title: "Mahnlauf abgeschlossen", description: `${data.processed} Mahnungen erstellt${data.skipped > 0 ? `, ${data.skipped} uebersprungen` : ""}` });
     },
     onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
   });
@@ -772,7 +772,7 @@ export default function RechnungsbuchPage() {
   const handleDunningSave = () => {
     if (!selectedOpenItem) return;
     const fee = parseFloat(dunningFee.replace(",", "."));
-    if (isNaN(fee)) { toast({ title: "Fehler", description: "Bitte gültige Mahngebühr eingeben", variant: "destructive" }); return; }
+    if (isNaN(fee)) { toast({ title: "Fehler", description: "Bitte gueltige Mahngebuehr eingeben", variant: "destructive" }); return; }
     const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 14);
     dunningMutation.mutate({
       documentId: selectedOpenItem.id,
@@ -787,7 +787,7 @@ export default function RechnungsbuchPage() {
   const handleBatchDunning = () => {
     const eligible = overdueItems.filter(i => !i.noReminder && i.dunningLevel < 3);
     if (eligible.length === 0) {
-      toast({ title: "Keine fälligen Rechnungen", description: "Alle überfälligen sind bereits auf Stufe 3 oder haben Mahnsperre.", variant: "destructive" });
+      toast({ title: "Keine faelligen Rechnungen", description: "Alle ueberfaelligen sind bereits auf Stufe 3 oder haben Mahnsperre.", variant: "destructive" });
       return;
     }
     batchDunningMutation.mutate(eligible.map(i => i.id));
@@ -807,7 +807,7 @@ export default function RechnungsbuchPage() {
           <h1 className="text-xl font-bold" data-testid="text-rechnungsbuch-title">Rechnungsausgangsbuch</h1>
           <p className="text-muted-foreground text-xs">
             {fibuTotal} Ausgangsrechnungen
-            {mahnwesenSummary.ueberfaellig > 0 && <span className="text-red-600 ml-2">• {mahnwesenSummary.ueberfaellig} überfällig</span>}
+            {mahnwesenSummary.ueberfaellig > 0 && <span className="text-red-600 ml-2">* {mahnwesenSummary.ueberfaellig} ueberfaellig</span>}
           </p>
         </div>
         <Button size="sm" onClick={() => setOpDialogOpen(true)} data-testid="button-zahlung-buchen" className="gap-1">
@@ -860,7 +860,7 @@ export default function RechnungsbuchPage() {
             </Select>
             <div className="hidden md:flex items-center gap-1">
               <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setFibuPage(0); }} className="w-[120px] h-7 text-xs" data-testid="input-date-from" />
-              <span className="text-[10px] text-muted-foreground">–</span>
+              <span className="text-[10px] text-muted-foreground">-</span>
               <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setFibuPage(0); }} className="w-[120px] h-7 text-xs" data-testid="input-date-to" />
             </div>
             {(searchTerm || statusFilter !== "alle" || typFilter !== "alle" || dateFrom || dateTo) && (
@@ -983,7 +983,7 @@ export default function RechnungsbuchPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Offene Posten</p>
                     <p className="text-xl font-bold" data-testid="text-mahn-faellig">{mahnwesenSummary.faellig}</p>
-                    <p className="text-[10px] text-muted-foreground">{mahnwesenSummary.ueberfaellig} überfällig</p>
+                    <p className="text-[10px] text-muted-foreground">{mahnwesenSummary.ueberfaellig} ueberfaellig</p>
                   </div>
                 </div>
               </CardContent>
@@ -993,9 +993,9 @@ export default function RechnungsbuchPage() {
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30"><Euro className="h-4 w-4 text-red-600" /></div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Fällige Forderungen</p>
+                    <p className="text-xs text-muted-foreground">Faellige Forderungen</p>
                     <p className="text-xl font-bold tabular-nums" data-testid="text-mahn-total">{fmtCurrency(mahnwesenSummary.totalFaellig)}</p>
-                    <p className="text-[10px] text-red-600 font-medium">{fmtCurrency(mahnwesenSummary.totalUeberfaellig)} überfällig</p>
+                    <p className="text-[10px] text-red-600 font-medium">{fmtCurrency(mahnwesenSummary.totalUeberfaellig)} ueberfaellig</p>
                   </div>
                 </div>
               </CardContent>
@@ -1006,7 +1006,7 @@ export default function RechnungsbuchPage() {
                   disabled={batchDunningMutation.isPending || overdueItems.filter(i => !i.noReminder && i.dunningLevel < 3).length === 0}
                   className="gap-1" data-testid="button-alle-mahnen">
                   <PlayCircle className="h-4 w-4" />
-                  {batchDunningMutation.isPending ? "Läuft..." : `Alle mahnen (${overdueItems.filter(i => !i.noReminder && i.dunningLevel < 3).length})`}
+                  {batchDunningMutation.isPending ? "Laeuft..." : `Alle mahnen (${overdueItems.filter(i => !i.noReminder && i.dunningLevel < 3).length})`}
                 </Button>
               </CardContent>
             </Card>
@@ -1014,13 +1014,13 @@ export default function RechnungsbuchPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2"><FileWarning className="h-4 w-4" /> Überfällige ({overdueItems.length})</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><FileWarning className="h-4 w-4" /> Ueberfaellige ({overdueItems.length})</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {overdueItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileWarning className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">Keine überfälligen Rechnungen</p>
+                  <p className="text-sm">Keine ueberfaelligen Rechnungen</p>
                 </div>
               ) : (
                 <Table>
@@ -1055,7 +1055,7 @@ export default function RechnungsbuchPage() {
                               <Badge className={`text-[10px] ${DUNNING_COLORS[item.dunningLevel] || DUNNING_COLORS[3]}`}>
                                 {item.dunningLevel}
                               </Badge>
-                            ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                            ) : <span className="text-[10px] text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
@@ -1116,7 +1116,7 @@ export default function RechnungsbuchPage() {
                     data-testid="input-op-customer"
                   />
                   {opCustomerId && (
-                    <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setOpCustomerId(null); setCustomerSearch(""); }} data-testid="button-clear-customer">✕</button>
+                    <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setOpCustomerId(null); setCustomerSearch(""); }} data-testid="button-clear-customer">x</button>
                   )}
                 </div>
                 {!opCustomerId && customerSearch.trim() && filteredCustomers.length > 0 && (
@@ -1124,7 +1124,7 @@ export default function RechnungsbuchPage() {
                     {filteredCustomers.map((c) => (
                       <button key={c.id} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex justify-between" onClick={() => { setOpCustomerId(c.id); setCustomerSearch(""); }} data-testid={`option-customer-${c.id}`}>
                         <span className="font-medium">{c.name}</span>
-                        <span className="text-xs text-muted-foreground">{c.customerNumber} · {c.city}</span>
+                        <span className="text-xs text-muted-foreground">{c.customerNumber} - {c.city}</span>
                       </button>
                     ))}
                   </div>
@@ -1190,7 +1190,7 @@ export default function RechnungsbuchPage() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Mahngebühr (€)</Label>
+                <Label className="text-xs">Mahngebuehr (EUR)</Label>
                 <Input value={dunningFee} onChange={(e) => setDunningFee(e.target.value)} data-testid="input-mahngebuehr" />
               </div>
             </div>

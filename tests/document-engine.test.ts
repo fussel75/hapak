@@ -1653,22 +1653,22 @@ describe("encoding UX guards", () => {
     };
     walk(path.resolve("client/src"));
 
+    const mojibakeFragments = [
+      "\u00c3",
+      "\u00c2",
+      "\u00e2",
+      "\u00f0",
+      "\u0178",
+    ];
+
     const offenders = files.flatMap((file) => {
       const source = fs.readFileSync(file, "utf8");
-      return ["Ã", "Â", "â", "Î"].some((fragment) => source.includes(fragment))
-        ? [path.relative(path.resolve("."), file)]
-        : [];
-    });
-
-    const broadOffenders = files.flatMap((file) => {
-      const source = fs.readFileSync(file, "utf8");
-      return ["Ã", "â€", "â€“", "â€”", "â•"].some((fragment) => source.includes(fragment))
+      return mojibakeFragments.some((fragment) => source.includes(fragment))
         ? [path.relative(path.resolve("."), file)]
         : [];
     });
 
     assert.deepEqual(offenders, []);
-    assert.deepEqual(broadOffenders, []);
   });
 
   it("keeps the IDS dialog focused on the working cart import", () => {
