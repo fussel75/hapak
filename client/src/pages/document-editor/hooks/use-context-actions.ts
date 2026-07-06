@@ -192,11 +192,6 @@ export function useContextActions({
           });
           setDirty(true);
         }
-      } else if (type === "_dokument_einfuegen") {
-        toast({
-          title: "Dokument einfügen",
-          description: "Funktion folgt in nächster Version",
-        });
       } else if (type === "material") {
         setArtikelDialog({ filter: "Material" });
       } else if (type === "jumbo") {

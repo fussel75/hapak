@@ -380,7 +380,6 @@ export function InsertMenu({
               () => onPaste?.(),
               !hasClipboard,
             )}
-            {item("_dokument_einfuegen", "Inhalt eines Dokuments...")}
             {sep()}
             {item("zwischensumme", "Zwischensumme")}
             {item("titelsumme", "Titel-Zwischensumme")}

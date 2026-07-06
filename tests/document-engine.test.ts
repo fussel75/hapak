@@ -2298,6 +2298,14 @@ describe("document editor context insertion guards", () => {
     assert.match(contextSource, /isAfterTotals && !afterTotalsAllowedTypes\.has\(type\)/);
     assert.match(contextSource, /Nach der Summe nicht moeglich/);
   });
+
+  it("does not expose placeholder document insert actions in the editor menu", () => {
+    const contextSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/hooks/use-context-actions.ts"), "utf8");
+    const menuSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/menus.tsx"), "utf8");
+
+    assert.doesNotMatch(contextSource, /Funktion folgt|_dokument_einfuegen/);
+    assert.doesNotMatch(menuSource, /Funktion folgt|_dokument_einfuegen|Inhalt eines Dokuments/);
+  });
 });
 
 describe("document item save payload", () => {
