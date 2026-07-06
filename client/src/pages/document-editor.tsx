@@ -95,7 +95,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import DocumentPreview from "@/components/document-preview";
 
 import type { EditorItem, IdsArticle, Material } from "./document-editor/types";
-import { genClientId, PT_TO_PX, emptyItem, remapClipboardItems, expandSelectionWithChildren, splitTitleDesc, kalkCalc, getVortextEndIdx, parseFontSpec } from "./document-editor/utils";
+import { genClientId, PT_TO_PX, emptyItem, remapClipboardItems, expandSelectionWithChildren, splitTitleDesc, kalkCalc, getVortextEndIdx, parseFontSpec, resolveEditorColumnWidths } from "./document-editor/utils";
 import {
   useItemOperations,
   useDocumentSave,
@@ -1062,48 +1062,10 @@ export default function DocumentEditorPage() {
   const tableFont = useMemoReact(() => parseFontSpec(activeWorkArea?.schriftart), [activeWorkArea]);
   const tableFontStyle = useMemoReact(() => ({ fontFamily: tableFont.fontFamily, fontSize: `${tableFont.fontSize}pt` }), [tableFont]);
 
-  const colWidths = useMemoReact(() => {
-    const cols = activeWorkArea?.spalten as { name: string; breite: number; ausrichtung?: string }[] | undefined;
-    const defaults = {
-      posW: 36, qtyW: 52, unitW: 30, descFlex: true, epW: 65, gpW: 70,
-      posLabel: "Pos", qtyLabel: "Menge", unitLabel: "ME", descLabel: "Bezeichnung", epLabel: "E-Preis", gpLabel: "G-Preis",
-      hasUnit: true,
-    };
-    if (!cols?.length) return defaults;
-
-    const nameMap: Record<string, { breite: number; label: string }> = {};
-    for (const c of cols) {
-      const n = (c.name || "").toLowerCase().replace(/[^a-zäöü0-9]/g, "");
-      const entry = { breite: c.breite, label: (c.name || "").trim() };
-      if (n.startsWith("pos")) nameMap.pos = entry;
-      else if (n.startsWith("menge") || n === "mge" || n === "qty") nameMap.qty = entry;
-      else if (n.startsWith("me") || n.startsWith("eh") || n === "einheit") nameMap.unit = entry;
-      else if (n.startsWith("bez") || n.startsWith("beschr") || n === "text" || n === "leistung") nameMap.desc = entry;
-      else if (n.startsWith("epreis") || n === "ep" || n === "einzelpreis") nameMap.ep = entry;
-      else if (n.startsWith("gpreis") || n === "gp" || n === "gesamtpreis") nameMap.gp = entry;
-    }
-    const total = cols.reduce((s, c) => s + (c.breite || 0), 0);
-    if (total <= 0) return defaults;
-
-    const pct = (v: number) => (v / total) * 100;
-    return {
-      posW: pct(nameMap.pos?.breite ?? 35),
-      qtyW: pct(nameMap.qty?.breite ?? 45),
-      unitW: pct(nameMap.unit?.breite ?? 25),
-      descFlex: true as const,
-      descW: pct(nameMap.desc?.breite ?? 250),
-      epW: pct(nameMap.ep?.breite ?? 70),
-      gpW: pct(nameMap.gp?.breite ?? 70),
-      posLabel: nameMap.pos?.label || "Pos",
-      qtyLabel: nameMap.qty?.label || "Menge",
-      unitLabel: nameMap.unit?.label || "ME",
-      descLabel: nameMap.desc?.label || "Bezeichnung",
-      epLabel: nameMap.ep?.label || "E-Preis",
-      gpLabel: nameMap.gp?.label || "G-Preis",
-      hasUnit: !!nameMap.unit,
-    };
-  }, [activeWorkArea]);
-
+  const colWidths = useMemoReact(
+    () => resolveEditorColumnWidths(activeWorkArea?.spalten),
+    [activeWorkArea],
+  );
   const usePercentWidths = !!(activeWorkArea?.spalten?.length);
 
   const templateDefaultsAppliedRef = useRef(false);

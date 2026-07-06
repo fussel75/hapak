@@ -58,7 +58,7 @@ import {
   validateDocumentItemBulkPayload,
 } from "../shared/document-engine/document-item-save";
 import { mapDocumentItemsForPrint } from "../shared/document-engine/print-items";
-import { emptyItem, getJumboChildInsertIndex, getJumboParentClientId } from "../client/src/pages/document-editor/utils";
+import { emptyItem, getJumboChildInsertIndex, getJumboParentClientId, resolveEditorColumnWidths } from "../client/src/pages/document-editor/utils";
 import { getSafeTemplateImageUrl } from "../shared/document-engine/template/image-url";
 import { resolveVariables } from "../shared/document-engine/template/resolve-variable";
 import { buildDocumentBundle } from "../server/pdf-generator";
@@ -2670,6 +2670,25 @@ describe("document editor item entry", () => {
 
     assert.match(qtyDisplaySource, /quantityEditing\s*\?/);
     assert.doesNotMatch(qtyDisplaySource, /quantityEditing\s*\|\|\s*focused/);
+  });
+
+  it("resolves editor column widths from form designer columns outside the editor component", () => {
+    const widths = resolveEditorColumnWidths([
+      { name: "Pos", breite: 30 },
+      { name: "Menge", breite: 50 },
+      { name: "Einheit", breite: 25 },
+      { name: "Bezeichnung", breite: 260 },
+      { name: "E-Preis", breite: 65 },
+      { name: "Gesamtpreis", breite: 70 },
+    ]);
+
+    assert.equal(widths.posLabel, "Pos");
+    assert.equal(widths.qtyLabel, "Menge");
+    assert.equal(widths.unitLabel, "Einheit");
+    assert.equal(widths.descLabel, "Bezeichnung");
+    assert.equal(widths.gpLabel, "Gesamtpreis");
+    assert.equal(widths.hasUnit, true);
+    assert.equal(Math.round(widths.gpW), 14);
   });
 
   it("creates visible manual positions and cost-following free jumbos", () => {

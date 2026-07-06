@@ -179,6 +179,88 @@ export function parseFontSpec(fontStr?: string): { fontFamily: string; fontSize:
   return { fontFamily: fallbacks, fontSize: size, fontWeight: bold ? "bold" : "normal" };
 }
 
+export type EditorColumnDefinition = {
+  name: string;
+  breite: number;
+  ausrichtung?: string;
+};
+
+export type EditorColumnWidths = {
+  posW: number;
+  qtyW: number;
+  unitW: number;
+  descFlex: true;
+  descW?: number;
+  epW: number;
+  gpW: number;
+  posLabel: string;
+  qtyLabel: string;
+  unitLabel: string;
+  descLabel: string;
+  epLabel: string;
+  gpLabel: string;
+  hasUnit: boolean;
+};
+
+export const DEFAULT_EDITOR_COLUMN_WIDTHS: EditorColumnWidths = {
+  posW: 36,
+  qtyW: 52,
+  unitW: 30,
+  descFlex: true,
+  epW: 65,
+  gpW: 70,
+  posLabel: "Pos",
+  qtyLabel: "Menge",
+  unitLabel: "ME",
+  descLabel: "Bezeichnung",
+  epLabel: "E-Preis",
+  gpLabel: "G-Preis",
+  hasUnit: true,
+};
+
+function normalizeColumnName(name: string): string {
+  return (name || "").toLowerCase().replace(/[^a-z\u00e4\u00f6\u00fc0-9]/g, "");
+}
+
+export function resolveEditorColumnWidths(
+  cols?: EditorColumnDefinition[],
+): EditorColumnWidths {
+  if (!cols?.length) return DEFAULT_EDITOR_COLUMN_WIDTHS;
+
+  const nameMap: Record<string, { breite: number; label: string }> = {};
+  for (const c of cols) {
+    const normalizedName = normalizeColumnName(c.name);
+    const entry = { breite: c.breite, label: (c.name || "").trim() };
+    if (normalizedName.startsWith("pos")) nameMap.pos = entry;
+    else if (normalizedName.startsWith("menge") || normalizedName === "mge" || normalizedName === "qty") nameMap.qty = entry;
+    else if (normalizedName.startsWith("me") || normalizedName.startsWith("eh") || normalizedName === "einheit") nameMap.unit = entry;
+    else if (normalizedName.startsWith("bez") || normalizedName.startsWith("beschr") || normalizedName === "text" || normalizedName === "leistung") nameMap.desc = entry;
+    else if (normalizedName.startsWith("epreis") || normalizedName === "ep" || normalizedName === "einzelpreis") nameMap.ep = entry;
+    else if (normalizedName.startsWith("gpreis") || normalizedName === "gp" || normalizedName === "gesamtpreis") nameMap.gp = entry;
+  }
+
+  const total = cols.reduce((sum, col) => sum + (col.breite || 0), 0);
+  if (total <= 0) return DEFAULT_EDITOR_COLUMN_WIDTHS;
+
+  const pct = (value: number) => (value / total) * 100;
+  return {
+    posW: pct(nameMap.pos?.breite ?? 35),
+    qtyW: pct(nameMap.qty?.breite ?? 45),
+    unitW: pct(nameMap.unit?.breite ?? 25),
+    descFlex: true,
+    descW: pct(nameMap.desc?.breite ?? 250),
+    epW: pct(nameMap.ep?.breite ?? 70),
+    gpW: pct(nameMap.gp?.breite ?? 70),
+    posLabel: nameMap.pos?.label || "Pos",
+    qtyLabel: nameMap.qty?.label || "Menge",
+    unitLabel: nameMap.unit?.label || "ME",
+    descLabel: nameMap.desc?.label || "Bezeichnung",
+    epLabel: nameMap.ep?.label || "E-Preis",
+    gpLabel: nameMap.gp?.label || "G-Preis",
+    hasUnit: !!nameMap.unit,
+  };
+}
+
 export function resolveVariable(
   template: string,
   vars: Record<string, string>,
