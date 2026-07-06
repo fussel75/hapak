@@ -1822,16 +1822,30 @@ describe("browser smoke workflow", () => {
   it("keeps a one-command local app starter wired", () => {
     const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
     const starter = fs.readFileSync(path.resolve("scripts/ensure-dev-server.ps1"), "utf8");
+    const runner = fs.readFileSync(path.resolve("scripts/run-dev-server.ps1"), "utf8");
 
     assert.equal(
       packageJson.scripts["app:up"],
       "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-dev-server.ps1",
     );
     assert.match(starter, /\/api\/health/);
+    assert.match(starter, /Get-Command powershell\.exe/);
+    assert.match(starter, /Remove-Item -LiteralPath \$logPath -Force -ErrorAction SilentlyContinue/);
+    assert.match(starter, /\$runnerArgument = "-NoProfile -ExecutionPolicy Bypass -File `"\$runner`""/);
     assert.match(starter, /Start-Process/);
+    assert.match(starter, /-ArgumentList \$runnerArgument/);
     assert.match(starter, /-WindowStyle Hidden/);
     assert.match(starter, /run-dev-server\.ps1/);
+    assert.match(starter, /FRISTD_DEV_LOG/);
+    assert.match(starter, /Exitcode: \$\(\$process\.ExitCode\)/);
+    assert.match(starter, /Get-Content -LiteralPath \$logPath -Encoding utf8 -Tail 120/);
     assert.match(starter, /FriStD-Bau ERP gestartet/);
+    assert.match(runner, /\[Console\]::OutputEncoding = \[System\.Text\.UTF8Encoding\]::new\(\)/);
+    assert.match(runner, /\$env:HOST = "127\.0\.0\.1"/);
+    assert.match(runner, /\$env:PORT = "5000"/);
+    assert.match(runner, /FRISTD_DEV_LOG/);
+    assert.match(runner, /Set-Content -LiteralPath \$logPath -Encoding utf8/);
+    assert.match(runner, /Add-Content -LiteralPath \$logPath -Encoding utf8/);
   });
 
   it("keeps local development startup pinned to a modern bundled Node and a real health route", () => {
