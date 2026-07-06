@@ -1730,6 +1730,9 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /const jumboRowsBefore = await page\.\$\$eval/);
     assert.match(smokeScript, /const known = new Set\(knownJumboRows\)/);
     assert.match(smokeScript, /jumbo-menu-manuell/);
+    assert.match(smokeScript, /assertManualToolbarWorkflow/);
+    assert.match(smokeScript, /toolbar-add-manuell-material/);
+    assert.match(smokeScript, /manual toolbar inserts typed manual positions/);
     assert.match(smokeScript, /kalk-pauschal-price/);
     assert.match(smokeScript, /123,45/);
     assert.match(smokeScript, /\/api\/projects\/\$\{projectId\}\/document-tree/);

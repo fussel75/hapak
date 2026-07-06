@@ -177,6 +177,12 @@ export function useItemOperations(params: UseItemOperationsParams): ItemOperatio
 
   const addPosition = useCallback(
     (type: string, parentJumboIndex?: number, insertAfterIndex?: number) => {
+      const manualVariantLabels: Record<string, string> = {
+        manuell_material: "Material",
+        manuell_leistung: "Leistung",
+        manuell_lohn: "Lohn",
+      };
+      const itemType = manualVariantLabels[type] ? "manuell" : type;
       const parentClientId = getJumboParentClientId(items, parentJumboIndex);
       const invalidParentInsert =
         parentJumboIndex != null && !parentClientId ? parentJumboIndex + 1 : null;
@@ -191,12 +197,15 @@ export function useItemOperations(params: UseItemOperationsParams): ItemOperatio
               ? focusedRow + 1
               : items.length;
       const newItem = emptyItem(
-        type,
+        itemType,
         documentId || 0,
         insertAt,
         parentClientId,
       );
-      if (type === "material" && editorSettings?.stdMeMaterial) {
+      if (manualVariantLabels[type]) {
+        newItem.title = manualVariantLabels[type];
+        newItem.unit = "Stk";
+      } else if (type === "material" && editorSettings?.stdMeMaterial) {
         newItem.unit = editorSettings.stdMeMaterial;
       } else if (type === "leistung" && editorSettings?.stdMeLeistung) {
         newItem.unit = editorSettings.stdMeLeistung;
@@ -271,7 +280,7 @@ export function useItemOperations(params: UseItemOperationsParams): ItemOperatio
       setItems(recalcTitelsummen(recalculatedItems));
       setFocusedRow(insertAt);
       setDirty(true);
-      if (type === "jumbo")
+      if (itemType === "jumbo")
         setExpandedJumbos((prev) => new Set([...prev, newItem._clientId]));
       setTimeout(() => {
         const row = tableRef.current?.querySelector(`[data-row="${insertAt}"]`);

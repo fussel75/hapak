@@ -968,6 +968,50 @@ async function assertFreeJumboWorkflow(page) {
   console.log("ok document editor free jumbo prices follow child position");
 }
 
+async function assertManualToolbarWorkflow(page) {
+  const firstRow = await page.$('[data-row="0"]');
+  if (!firstRow) {
+    throw new Error("document editor manual toolbar: keine erste Dokumentzeile gefunden");
+  }
+
+  const rowsBefore = await page.$$eval("[data-row]", (rows) => rows.length);
+  const manualRowsBefore = await page.$$eval("[data-row]", (rows) =>
+    rows.filter((row) => (row.getAttribute("data-position-type") || "").toLowerCase() === "manuell").length,
+  );
+  await firstRow.click();
+  await page.click('[data-testid="toolbar-add-manuell"]');
+  await page.waitForSelector('[data-testid="toolbar-add-manuell-material"]', { timeout: 10_000 });
+  await page.click('[data-testid="toolbar-add-manuell-material"]');
+  await page.waitForFunction(
+    (count) => document.querySelectorAll("[data-row]").length > count,
+    { timeout: 10_000 },
+    rowsBefore,
+  );
+
+  const manualState = await page.evaluate((manualCountBefore) => {
+    const rows = Array.from(document.querySelectorAll("[data-row]"));
+    const manualRows = rows.filter((row) => (row.getAttribute("data-position-type") || "").toLowerCase() === "manuell");
+    const manualRow = manualRows.find((row) => {
+      const type = (row.getAttribute("data-position-type") || "").toLowerCase();
+      const text = row.textContent || "";
+      return type === "manuell" && text.includes("Material");
+    });
+    return manualRows.length > manualCountBefore && manualRow
+      ? { ok: true, message: "" }
+      : {
+          ok: false,
+          message: `Keine manuelle Materialposition ueber Toolbar angelegt (manualRows=${manualRows.map((row) => row.textContent?.replace(/\s+/g, " ").trim()).join(" | ")})`,
+        };
+  }, manualRowsBefore);
+
+  if (!manualState.ok) {
+    throw new Error(`document editor manual toolbar: ${manualState.message}`);
+  }
+
+  await assertNoRuntimeOverlay(page, "manual toolbar workflow");
+  console.log("ok document editor manual toolbar inserts typed manual positions");
+}
+
 const executablePath = findBrowserExecutable();
 const pageErrors = [];
 
@@ -1040,6 +1084,7 @@ try {
     await assertQuantityInputAcceptsGermanDecimal(page);
     await assertFreeTextMultilineEditing(page);
     await assertFreeJumboWorkflow(page);
+    await assertManualToolbarWorkflow(page);
   });
 
   const screenshotDir = process.env.SMOKE_SCREENSHOT_DIR || path.join(os.tmpdir(), "fristd-bau-smoke");

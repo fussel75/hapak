@@ -841,7 +841,6 @@ export function EditorToolbar({
           { key: "jumbo", label: "Jumbo", shortcut: "F4", action: () => setArtikelDialog({ filter: "Jumbo" }) },
           { key: "jumbo-frei", label: "Jumbo frei", shortcut: "F5", action: () => addPosition("jumbo") },
           { key: "lohn", label: "Lohn", action: () => { setLohnOpen(true); setLohnTargetJumbo(null); } },
-          { key: "manuell", label: "Manuell" },
         ].map(({ key, label, action, shortcut }: any) => (
           <button
             key={key}
@@ -854,6 +853,33 @@ export function EditorToolbar({
             {shortcut && <span className="text-[9px] text-slate-400 ml-1">{shortcut}</span>}
           </button>
         ))}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="h-7 rounded-md border border-transparent px-2.5 text-[11px] font-medium shrink-0 text-slate-600 hover:border-cyan-100 hover:text-slate-950 hover:bg-white hover:shadow-sm transition-all inline-flex items-center gap-1"
+              title={helperTitle("Manuelle Position einfügen")}
+              data-testid="toolbar-add-manuell"
+            >
+              Manuell
+              <ChevronDown className="h-3 w-3 text-slate-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44">
+            <DropdownMenuItem onClick={() => addPosition("manuell_leistung")} data-testid="toolbar-add-manuell-leistung">
+              Leistung
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addPosition("manuell_material")} data-testid="toolbar-add-manuell-material">
+              Material
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addPosition("manuell_lohn")} data-testid="toolbar-add-manuell-lohn">
+              Lohn
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => addPosition("jumbo")} data-testid="toolbar-add-manuell-jumbo">
+              JUMBO frei
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span className="h-4 border-l border-slate-200 mx-1" />
         {(() => {
           const insertIdx = focusedRow ?? items.length - 1;
