@@ -1640,7 +1640,7 @@ describe("designer UX guards", () => {
 });
 
 describe("encoding UX guards", () => {
-  it("keeps common mojibake fragments out of client source text", () => {
+  it("keeps common mojibake fragments out of client and smoke source text", () => {
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -1653,6 +1653,11 @@ describe("encoding UX guards", () => {
       }
     };
     walk(path.resolve("client/src"));
+    files.push(
+      path.resolve("scripts/smoke-browser.mjs"),
+      path.resolve("scripts/smoke-local.mjs"),
+      path.resolve("scripts/smoke-incoming-fibu.mjs"),
+    );
 
     const mojibakeFragments = [
       "\u00c3",
