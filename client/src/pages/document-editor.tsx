@@ -43,7 +43,6 @@ import {
 import { recalcJumboFromChildren } from "@shared/document-engine/jumbo";
 import { normalizeDocumentCreateType } from "@shared/document-engine/document-types";
 import { normalizeDocumentTypeLabel } from "@shared/document-engine/document-title";
-import { getEffectiveAfterTotalsText } from "@shared/document-engine/payment-terms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,7 +94,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import DocumentPreview from "@/components/document-preview";
 
 import type { EditorItem, IdsArticle, Material } from "./document-editor/types";
-import { genClientId, PT_TO_PX, emptyItem, remapClipboardItems, expandSelectionWithChildren, splitTitleDesc, kalkCalc, getVortextEndIdx, parseFontSpec, resolveEditorColumnWidths } from "./document-editor/utils";
+import { genClientId, PT_TO_PX, emptyItem, remapClipboardItems, expandSelectionWithChildren, splitTitleDesc, kalkCalc, getVortextEndIdx, parseFontSpec, resolveEditorColumnWidths, getJumboChildCount, buildEditorZones } from "./document-editor/utils";
 import {
   useItemOperations,
   useDocumentSave,
@@ -1041,10 +1040,6 @@ export default function DocumentEditorPage() {
   };
   const convertTargets = allowedConversionsMap[docForm.type] || [];
 
-  const getJumboChildCount = (i: number) =>
-    items.filter((it) => it._parentClientId === items[i]?._clientId).length;
-
-
   const effectiveTemplateId = getEffectiveFormTemplateId({
     documentFormTemplateId: docForm.formTemplateId,
     documentTypeDefaultFormTemplateId,
@@ -1084,16 +1079,10 @@ export default function DocumentEditorPage() {
     }
   }, [documentId, activeWorkArea]);
 
-  const editorZones = useMemoReact(() => ({
-    beforeWorkText: docForm.beforeWorkText || docForm.headerText || "",
-    beforeTotalsText: docForm.beforeTotalsText || docForm.footerText || "",
-    afterTotalsText: getEffectiveAfterTotalsText(
-      docForm.afterTotalsText || "",
-      docForm.skontoImDokument !== false,
-      items.some((item) => item.type === "skonto"),
-    ),
-    showSkonto: docForm.skontoImDokument !== false,
-  }), [docForm.beforeWorkText, docForm.headerText, docForm.beforeTotalsText, docForm.footerText, docForm.afterTotalsText, docForm.skontoImDokument, items]);
+  const editorZones = useMemoReact(
+    () => buildEditorZones(docForm, items),
+    [docForm.beforeWorkText, docForm.headerText, docForm.beforeTotalsText, docForm.footerText, docForm.afterTotalsText, docForm.skontoImDokument, items],
+  );
 
   const enginePages = useMemoReact(
     () => paginateDocument(items, resolvedTemplate, visibleExpandedJumbos, editorZones, undefined, docForm.internpositionenVerbergen !== false),
@@ -1988,7 +1977,7 @@ export default function DocumentEditorPage() {
                                     jumboExpanded={visibleExpandedJumbos.has(item._clientId)}
                                     jumboChildCount={
                                       (item.positionFlag === "jumbo" || (item.type === "jumbo" && !item._parentClientId))
-                                        ? getJumboChildCount(index)
+                                        ? getJumboChildCount(items, index)
                                         : 0
                                     }
                                     onToggleJumbo={() =>
@@ -2101,7 +2090,7 @@ export default function DocumentEditorPage() {
                                   jumboExpanded={visibleExpandedJumbos.has(item._clientId)}
                                   jumboChildCount={
                                     (item.positionFlag === "jumbo" || (item.type === "jumbo" && !item._parentClientId))
-                                      ? getJumboChildCount(index)
+                                      ? getJumboChildCount(items, index)
                                       : 0
                                   }
                                   onToggleJumbo={() =>
@@ -2189,7 +2178,7 @@ export default function DocumentEditorPage() {
                                 (item.positionFlag === "jumbo" || (item.type === "jumbo" && !item._parentClientId)) &&
                                 visibleExpandedJumbos.has(item._clientId)
                               ) {
-                                const childCount = getJumboChildCount(index);
+                                const childCount = getJumboChildCount(items, index);
                                 if (childCount === 0) {
                                   return row;
                                 }

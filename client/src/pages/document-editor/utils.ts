@@ -1,4 +1,5 @@
 import type { EditorItem } from "./types";
+import { getEffectiveAfterTotalsText } from "../../../../shared/document-engine/payment-terms";
 import {
   getDefaultPriceFollowsCost,
   getDefaultQuantityForType,
@@ -17,11 +18,11 @@ export const posTypeShort: Record<string, string> = {
   jumbo: "JUM",
   lohn: "LOH",
   manuell: "MAN",
-  titelsumme: "T∑",
+  titelsumme: "TS",
   untertitel: "UT",
   zuschlag: "ZU",
   abschluss: "AB",
-  zwischensumme: "Z∑",
+  zwischensumme: "ZS",
   freitext: "FT",
   floskel: "FL",
   skonto: "SK",
@@ -84,6 +85,42 @@ export function getJumboChildInsertIndex(
     else break;
   }
   return last + 1;
+}
+
+export function getJumboChildCount(items: EditorItem[], parentJumboIndex: number): number {
+  const parentClientId = getJumboParentClientId(items, parentJumboIndex);
+  if (!parentClientId) return 0;
+  return items.filter((item) => item._parentClientId === parentClientId).length;
+}
+
+export type EditorZoneInputs = {
+  beforeWorkText?: string | null;
+  headerText?: string | null;
+  beforeTotalsText?: string | null;
+  footerText?: string | null;
+  afterTotalsText?: string | null;
+  skontoImDokument?: boolean | null;
+};
+
+export type EditorZones = {
+  beforeWorkText: string;
+  beforeTotalsText: string;
+  afterTotalsText: string;
+  showSkonto: boolean;
+};
+
+export function buildEditorZones(form: EditorZoneInputs, items: Pick<EditorItem, "type">[]): EditorZones {
+  const showSkonto = form.skontoImDokument !== false;
+  return {
+    beforeWorkText: form.beforeWorkText || form.headerText || "",
+    beforeTotalsText: form.beforeTotalsText || form.footerText || "",
+    afterTotalsText: getEffectiveAfterTotalsText(
+      form.afterTotalsText || "",
+      showSkonto,
+      items.some((item) => item.type === "skonto"),
+    ),
+    showSkonto,
+  };
 }
 
 export const emptyItem = (

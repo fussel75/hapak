@@ -58,7 +58,7 @@ import {
   validateDocumentItemBulkPayload,
 } from "../shared/document-engine/document-item-save";
 import { mapDocumentItemsForPrint } from "../shared/document-engine/print-items";
-import { emptyItem, getJumboChildInsertIndex, getJumboParentClientId, resolveEditorColumnWidths } from "../client/src/pages/document-editor/utils";
+import { buildEditorZones, emptyItem, getJumboChildCount, getJumboChildInsertIndex, getJumboParentClientId, resolveEditorColumnWidths } from "../client/src/pages/document-editor/utils";
 import { getSafeTemplateImageUrl } from "../shared/document-engine/template/image-url";
 import { resolveVariables } from "../shared/document-engine/template/resolve-variable";
 import { buildDocumentBundle } from "../server/pdf-generator";
@@ -959,8 +959,7 @@ describe("document editor skonto UX guards", () => {
     const operationsSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/hooks/use-item-operations.ts"), "utf8");
 
     assert.match(editorSource, /skontoImDokument: false/);
-    assert.match(editorSource, /getEffectiveAfterTotalsText\(/);
-    assert.match(editorSource, /items\.some\(\(item\) => item\.type === "skonto"\)/);
+    assert.match(editorSource, /buildEditorZones\(docForm, items\)/);
     assert.match(editorSource, /setDocForm,/);
     assert.match(sidebarSource, /input-skonto-visible-sidebar/);
     assert.match(sidebarSource, /skontoImDokument: e\.target\.checked/);
@@ -1040,7 +1039,7 @@ describe("document editor display polish guards", () => {
     assert.match(editorSource, /data-testid="document-work-surface"/);
     assert.match(editorSource, /overflow-y-auto overflow-x-hidden work-surface/);
     assert.doesNotMatch(editorSource, /overflow-y-auto overflow-x-auto work-surface/);
-    assert.match(editorSource, /const childCount = getJumboChildCount\(index\)/);
+    assert.match(editorSource, /const childCount = getJumboChildCount\(items, index\)/);
     assert.match(editorSource, /if \(childCount === 0\)/);
     assert.doesNotMatch(editorSource, /childCount === 0 && !activeJumbo/);
     assert.match(editorSource, /onAddJumboChild=\{\(type\) => handleAddJumboChild\(index, item, type\)\}/);
@@ -2727,6 +2726,25 @@ describe("document editor item entry", () => {
     assert.equal(getJumboParentClientId(items, 0), null);
     assert.equal(getJumboParentClientId(items, 1), "jumbo");
     assert.equal(getJumboChildInsertIndex(items, 1), 3);
+    assert.equal(getJumboChildCount(items, 0), 0);
+    assert.equal(getJumboChildCount(items, 1), 1);
+  });
+
+  it("builds editor pagination zones outside the editor component", () => {
+    const zones = buildEditorZones(
+      {
+        headerText: "Vortext",
+        footerText: "Vor der Summe",
+        afterTotalsText: "Zahlbar innerhalb von 14 Tagen ohne Abzug, 2 Prozent Skonto bei Zahlung innerhalb von 7 Tagen.",
+        skontoImDokument: true,
+      },
+      [emptyItem("skonto", 1, 0)],
+    );
+
+    assert.equal(zones.beforeWorkText, "Vortext");
+    assert.equal(zones.beforeTotalsText, "Vor der Summe");
+    assert.equal(zones.afterTotalsText, "Zahlbar innerhalb von 14 Tagen ohne Abzug.");
+    assert.equal(zones.showSkonto, true);
   });
 
   it("calculates free jumbo prices from its children", () => {
