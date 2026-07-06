@@ -1670,6 +1670,17 @@ describe("encoding UX guards", () => {
     assert.deepEqual(offenders, []);
     assert.deepEqual(broadOffenders, []);
   });
+
+  it("keeps the IDS dialog focused on the working cart import", () => {
+    const source = fs.readFileSync(
+      path.resolve("client/src/pages/document-editor/components/dialogs/ids-connect-dialog.tsx"),
+      "utf8",
+    );
+
+    assert.match(source, /Warenkorb importieren/);
+    assert.match(source, /GC-Online-Shop oeffnen/);
+    assert.doesNotMatch(source, /Artikel suchen|Direktsuche|in Entwicklung|searchTerm|setTab|tab ===/);
+  });
 });
 
 describe("browser smoke workflow", () => {
