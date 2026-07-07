@@ -13,7 +13,7 @@ import { fmtDocNumber as fmtUiDocNumber, fmtQty as fmtUiQty } from "../client/sr
 import { normalizePrintDisplayMode } from "../shared/document-engine/display-mode";
 import { formatDocumentNumberWithCustomSuffix, normalizeDocumentTypeLabel } from "../shared/document-engine/document-title";
 import { getEffectiveAfterTotalsText } from "../shared/document-engine/payment-terms";
-import { cleanHapakTextBlock, isHapakTextArtifactLine } from "../shared/document-engine/hapak-text-artifacts";
+import { cleanHapakTextBlock, isHapakTextArtifactLine, repairHapakMojibake } from "../shared/document-engine/hapak-text-artifacts";
 import {
   countsForTotal as positionCountsForTotal,
   getDefaultPriceFollowsCost,
@@ -1023,9 +1023,11 @@ describe("document editor display polish guards", () => {
     assert.match(rowSource, /aria-label="Jumbo-Unterposition anlegen"/);
     assert.match(rowSource, /<Plus className="h-3 w-3" aria-hidden="true" \/>/);
     assert.doesNotMatch(rowSource, />\s*\+\s*Anh.ngen\s*</);
-    assert.match(rowSource, /isJumbo && !isSubItem && \(focused \|\| selected \|\| jumboMenuOpen\) &&/);
+    assert.match(rowSource, /isJumbo && !isSubItem && \(/);
+    assert.doesNotMatch(rowSource, /isJumbo && !isSubItem && \(focused \|\| selected \|\| jumboMenuOpen\) &&/);
     assert.match(rowSource, /isJumbo && !isSubItem && jumboMenuOpen &&/);
     assert.match(rowSource, /data-testid="jumbo-menu-manuell"/);
+    assert.match(rowSource, /data-testid="jumbo-menu-material"/);
     const priceDialogSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/dialogs/price-dialog.tsx"), "utf8");
     assert.match(priceDialogSource, /const calculationRows = children\.length > 0 \? children : parent \? \[parent\] : \[\]/);
     assert.match(priceDialogSource, /if \(externalEk > 0\)/);
@@ -1745,6 +1747,10 @@ describe("browser smoke workflow", () => {
     assert.match(smokeScript, /toolbar-add-jumbo-frei/);
     assert.match(smokeScript, /const jumboRowsBefore = await page\.\$\$eval/);
     assert.match(smokeScript, /const known = new Set\(knownJumboRows\)/);
+    assert.match(smokeScript, /const parentRow = document\.querySelector\(`\[data-row="\$\{parentIndex\}"\]`\)/);
+    assert.match(smokeScript, /Plus-Menue der Jumbo-Zeile/);
+    assert.match(smokeScript, /const childRow = document\.querySelector\(`\[data-row="\$\{childIndex\}"\]`\)/);
+    assert.match(smokeScript, /Preisbutton der Kindzeile/);
     assert.match(smokeScript, /jumbo-menu-manuell/);
     assert.match(smokeScript, /assertManualToolbarWorkflow/);
     assert.match(smokeScript, /toolbar-add-manuell-material/);
@@ -2009,7 +2015,7 @@ describe("hapak import analysis", () => {
     assert.match(source, /mapWithConcurrency/);
     assert.match(source, /parentSourceLine/);
     assert.match(source, /quantity !== 0 && unitPrice !== 0 \? quantity \* unitPrice : 0/);
-    assert.match(source, /repairMojibake/);
+    assert.match(source, /repairHapakMojibake/);
     assert.match(source, /isLikelyCorruptMemoFragment/);
     assert.match(source, /customers/);
     assert.match(source, /projects/);
@@ -2457,10 +2463,16 @@ describe("HAPAK JUMBO import", () => {
     assert.equal(isHapakTextArtifactLine("┬º0"), true);
     assert.equal(isHapakTextArtifactLine("(12"), true);
     assert.equal(isHapakTextArtifactLine("Leistungszeitraum Mai - Juni 2026"), false);
+    assert.equal(repairHapakMojibake("Zulage zur Vorposition: Aush\u00c3\u00b6hen"), "Zulage zur Vorposition: Aushöhen");
+    assert.equal(repairHapakMojibake("37,50 m\u00c2\u00b2 Fermacell"), "37,50 m² Fermacell");
 
     assert.equal(
       cleanHapakTextBlock("Heukoppel 92, WP, FbHzg., Demontage FB.\n┬º0"),
       "Heukoppel 92, WP, FbHzg., Demontage FB.",
+    );
+    assert.equal(
+      cleanHapakTextBlock("Zulage zur Vorposition: Aush\u00c3\u00b6hen\n37,50 m\u00c2\u00b2 Fermacell\n\u00c2\u00ba0"),
+      "Zulage zur Vorposition: Aushöhen\n37,50 m² Fermacell",
     );
   });
 
@@ -2683,6 +2695,9 @@ describe("document editor item entry", () => {
 
     assert.match(qtyDisplaySource, /quantityEditing\s*\?/);
     assert.doesNotMatch(qtyDisplaySource, /quantityEditing\s*\|\|\s*focused/);
+    assert.match(rowSource, /const input = event\.currentTarget/);
+    assert.match(rowSource, /requestAnimationFrame\(\(\) => input\.select\(\)\)/);
+    assert.doesNotMatch(rowSource, /onClick=\{\(e\) => \(e\.target as HTMLInputElement\)\.select\(\)\}/);
   });
 
   it("resolves editor column widths from form designer columns outside the editor component", () => {
@@ -2705,6 +2720,7 @@ describe("document editor item entry", () => {
   });
 
   it("creates visible manual positions and cost-following free jumbos", () => {
+    const rowSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/position-row.tsx"), "utf8");
     const manual = emptyItem("manuell", 1, 0);
     const jumbo = emptyItem("jumbo", 1, 1);
 
@@ -2712,6 +2728,10 @@ describe("document editor item entry", () => {
     assert.equal(manual.unit, "Stk");
     assert.equal(manual.title, "Leistung");
     assert.equal(jumbo.priceFollowsCost, true);
+    assert.match(rowSource, /data-testid=\{`button-jumbo-add-\$\{index\}`\}/);
+    assert.match(rowSource, /data-testid="jumbo-menu-manuell"/);
+    assert.match(rowSource, /data-testid="jumbo-menu-material"/);
+    assert.doesNotMatch(rowSource, /focused \|\| selected \|\| jumboMenuOpen/);
   });
 
   it("creates new items from the central position type defaults", () => {

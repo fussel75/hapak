@@ -1,4 +1,5 @@
 import { useEffect, useState, memo } from "react";
+import type { FocusEvent } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus } from "lucide-react";
@@ -432,10 +433,12 @@ export const PositionRow = memo(function PositionRow({
     }
   }, [item.quantity, quantityEditing]);
 
-  const handleQtyFocus = () => {
+  const handleQtyFocus = (event: FocusEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
     setQuantityEditing(true);
     setQuantityDraft(formatEditableGermanDecimal(item.quantity));
     onFocus();
+    window.requestAnimationFrame(() => input.select());
   };
 
   const handleQtyChange = (value: string) => {
@@ -745,7 +748,6 @@ export const PositionRow = memo(function PositionRow({
                 onChange={(e) => handleQtyChange(e.target.value)}
                 onBlur={(e) => handleQtyBlur(e.target.value)}
                 onFocus={handleQtyFocus}
-                onClick={(e) => (e.target as HTMLInputElement).select()}
                 onKeyDown={(e) => handleTabNav(e, "quantity")}
                 data-field="quantity"
                 data-testid={`input-qty-${index}`}
@@ -830,7 +832,6 @@ export const PositionRow = memo(function PositionRow({
             onChange={(e) => handleQtyChange(e.target.value)}
             onBlur={(e) => handleQtyBlur(e.target.value)}
             onFocus={handleQtyFocus}
-            onClick={(e) => (e.target as HTMLInputElement).select()}
             onKeyDown={(e) => handleTabNav(e, "quantity")}
             data-field="quantity"
             data-testid={`input-qty-${index}`}
@@ -867,8 +868,8 @@ export const PositionRow = memo(function PositionRow({
             />
             </div>
           </div>
-          {isJumbo && !isSubItem && (focused || selected || jumboMenuOpen) && (
-          <div className="absolute right-1 top-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          {isJumbo && !isSubItem && (
+          <div className="absolute right-1 top-1 flex justify-end opacity-100 transition-opacity">
             <button
               type="button"
               className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 focus:border-cyan-300 focus:bg-cyan-50 focus:text-cyan-700 focus:outline-none"
@@ -889,13 +890,13 @@ export const PositionRow = memo(function PositionRow({
               className="absolute right-1 top-full z-50 mt-1 w-36 rounded-md border border-slate-200 bg-white py-1 text-xs shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
-              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("material")}>
+              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("material")} data-testid="jumbo-menu-material">
                 Material
               </button>
-              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("leistung")}>
+              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("leistung")} data-testid="jumbo-menu-leistung">
                 Leistung
               </button>
-              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("lohn")}>
+              <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("lohn")} data-testid="jumbo-menu-lohn">
                 Lohn
               </button>
               <button type="button" className="block w-full px-3 py-1.5 text-left hover:bg-slate-50" onClick={() => onAddJumboChild("manuell")} data-testid="jumbo-menu-manuell">
@@ -1012,7 +1013,6 @@ export const PositionRow = memo(function PositionRow({
           onChange={(e) => handleQtyChange(e.target.value)}
           onBlur={(e) => handleQtyBlur(e.target.value)}
           onFocus={handleQtyFocus}
-          onClick={(e) => (e.target as HTMLInputElement).select()}
           onKeyDown={(e) => handleTabNav(e, "quantity")}
           data-field="quantity"
           data-testid={`input-qty-${index}`}

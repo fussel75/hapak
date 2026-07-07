@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DBFFile } from "dbffile";
 import { expandHapakDetailedJumbos } from "../shared/document-engine/hapak-jumbo-import";
-import { cleanHapakTextBlock, isHapakTextArtifactLine } from "../shared/document-engine/hapak-text-artifacts";
+import { cleanHapakTextBlock, isHapakTextArtifactLine, repairHapakMojibake } from "../shared/document-engine/hapak-text-artifacts";
 
 type Row = Record<string, any>;
 
@@ -341,18 +341,6 @@ function stripFontMetadata(str: string): string {
     .trim();
 }
 
-function repairMojibake(text: string): string {
-  if (!/[ÃÂâ�]/.test(text)) return text;
-  try {
-    const repaired = Buffer.from(text, "latin1").toString("utf8");
-    const originalScore = (text.match(/[ÃÂâ�]/g) || []).length;
-    const repairedScore = (repaired.match(/[ÃÂâ�]/g) || []).length;
-    return repairedScore < originalScore ? repaired : text;
-  } catch {
-    return text;
-  }
-}
-
 function isMostlyFiller(text: string): boolean {
   const compact = text.replace(/\s/g, "");
   if (!compact) return true;
@@ -384,7 +372,7 @@ function cleanText(value: unknown): string {
   const text = S(value);
   if (!text) return "";
   const cleaned = stripFontMetadata(
-    repairMojibake(text)
+    repairHapakMojibake(text)
       .replace(/\0/g, "")
       .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, "")
       .trim(),

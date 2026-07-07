@@ -882,7 +882,16 @@ async function assertFreeJumboWorkflow(page) {
   }
 
   const rowsBeforeChild = await page.$$eval("[data-row]", (rows) => rows.length);
-  await page.click(`[data-testid="button-jumbo-add-${jumboState.rowIndex}"]`);
+  const jumboAddClicked = await page.evaluate((parentIndex) => {
+    const parentRow = document.querySelector(`[data-row="${parentIndex}"]`);
+    const addButton = parentRow?.querySelector(`[data-testid="button-jumbo-add-${parentIndex}"]`);
+    if (!(addButton instanceof HTMLElement)) return false;
+    addButton.click();
+    return true;
+  }, jumboState.rowIndex);
+  if (!jumboAddClicked) {
+    throw new Error(`document editor free jumbo: Plus-Menue der Jumbo-Zeile ${jumboState.rowIndex} nicht gefunden`);
+  }
   await page.waitForSelector('[data-testid="jumbo-menu-manuell"]', { timeout: 10_000 });
   await page.$eval('[data-testid="jumbo-menu-manuell"]', (button) => button.click());
   await page.waitForFunction(
@@ -919,7 +928,16 @@ async function assertFreeJumboWorkflow(page) {
     throw new Error(`document editor free jumbo child: ${childState.message}`);
   }
 
-  await page.click(`[data-testid="button-price-${childState.childIndex}"]`);
+  const childPriceClicked = await page.evaluate((childIndex) => {
+    const childRow = document.querySelector(`[data-row="${childIndex}"]`);
+    const priceButton = childRow?.querySelector(`[data-testid="button-price-${childIndex}"]`);
+    if (!(priceButton instanceof HTMLElement)) return false;
+    priceButton.click();
+    return true;
+  }, childState.childIndex);
+  if (!childPriceClicked) {
+    throw new Error(`document editor free jumbo child: Preisbutton der Kindzeile ${childState.childIndex} nicht gefunden`);
+  }
   await page.waitForSelector('[data-testid="kalk-submit"]', { timeout: 10_000 });
   await page.click('[data-testid="kalk-mode-pauschal"]');
   await page.waitForSelector('[data-testid="kalk-pauschal-price"]', { timeout: 10_000 });
