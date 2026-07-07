@@ -3243,6 +3243,16 @@ describe("document pagination", () => {
     assert.equal(pages.every((page) => page.blocks.some((block) => String(block.data?.text ?? block.type).trim().length > 0)), true);
   });
 
+  it("opens split after-totals floskel text in a full-text editor", () => {
+    const source = fs.readFileSync(path.join(process.cwd(), "client/src/pages/document-editor.tsx"), "utf8");
+
+    assert.match(source, /afterTotalsEditOpen/);
+    assert.match(source, /Floskel \/ Endtext bearbeiten/);
+    assert.match(source, /data-testid="after-totals-textarea"/);
+    assert.match(source, /setAfterTotalsEditOpen\(true\)/);
+    assert.doesNotMatch(source, /contentEditable=\{singleBlock\}/);
+  });
+
   it("ignores imported HAPAK text artifacts after the totals", () => {
     const items = [
       item({ _clientId: "net", type: "nettosumme", title: "Nettosumme" }),

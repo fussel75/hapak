@@ -208,12 +208,13 @@ export function paginateDocument(
       return;
     }
 
-    const ZONE_LINE_H = HEIGHTS.TEXT_LINE_HEIGHT;
+    const isAfterTotalsText = blockType === "afterTotalsTextBlock";
+    const ZONE_LINE_H = isAfterTotalsText ? 10 : HEIGHTS.TEXT_LINE_HEIGHT;
     const ZONE_CPL = 85;
     const htmlMode = isHtmlContent(text);
     const paragraphs = htmlMode ? splitHtmlIntoParagraphs(text) : text.split("\n");
     let currentParagraphs: string[] = [];
-    let currentPartH = 4;
+    let currentPartH = isAfterTotalsText ? 2 : 4;
     let splitPartIndex = 0;
 
     const flushTextPart = () => {
@@ -222,7 +223,7 @@ export function paginateDocument(
       const plainPartText = htmlMode ? stripHtml(partText) : partText;
       if (!plainPartText.trim()) {
         currentParagraphs = [];
-        currentPartH = 4;
+        currentPartH = isAfterTotalsText ? 2 : 4;
         return;
       }
       const partH = currentPartH;
@@ -236,11 +237,11 @@ export function paginateDocument(
       });
       currentHeight += partH;
       currentParagraphs = [];
-      currentPartH = 4;
+      currentPartH = isAfterTotalsText ? 2 : 4;
     };
 
     const ensureWritablePage = () => {
-      const minUsefulSpace = ZONE_LINE_H + 4;
+      const minUsefulSpace = ZONE_LINE_H + (isAfterTotalsText ? 2 : 4);
       if (availableHeight() - currentHeight < minUsefulSpace && currentBlocks.length > 0) {
         flushPage();
       }
@@ -258,6 +259,21 @@ export function paginateDocument(
       if (avail < 0) avail = 0;
 
       if (currentPartH + paraH > avail && currentParagraphs.length > 0) {
+        if (isAfterTotalsText && !htmlMode) {
+          const remainingLines = Math.floor(Math.max(0, avail - currentPartH) / ZONE_LINE_H);
+          if (remainingLines > 0 && plainText.trim().length > 0) {
+            const [part, rest] = splitTextAtWrappedLine(para, remainingLines, ZONE_CPL);
+            if (part?.trim() && rest?.trim()) {
+              const partLines = Math.max(1, estimateWrappedLines(part, ZONE_CPL));
+              currentParagraphs.push(part);
+              currentPartH += partLines * ZONE_LINE_H;
+              paragraphs.splice(pi + 1, 0, rest);
+              flushTextPart();
+              flushPage();
+              continue;
+            }
+          }
+        }
         flushTextPart();
         flushPage();
       }

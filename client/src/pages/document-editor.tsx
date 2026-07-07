@@ -191,6 +191,7 @@ export default function DocumentEditorPage() {
   const [titelsummeDetailIndex, setTitelsummeDetailIndex] = useState<number | null>(null);
   const [jumboMenuOpen, setJumboMenuOpen] = useState<number | null>(null);
   const [vortextEditOpen, setVortextEditOpen] = useState(false);
+  const [afterTotalsEditOpen, setAfterTotalsEditOpen] = useState(false);
   const [showKalk, setShowKalk] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showOriginalQuantities, setShowOriginalQuantities] = useState(false);
@@ -1227,6 +1228,28 @@ export default function DocumentEditorPage() {
           (resolvedTemplate.fields as any[])?.find((f: any) => f.id === "arbeitsbereich" || f.inhalt === "[Arbeitsbereich]" || f.typ === "Arbeitsbereich")?.w || 494
         }
       />
+      <Dialog open={afterTotalsEditOpen} onOpenChange={setAfterTotalsEditOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Floskel / Endtext bearbeiten</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={docForm.afterTotalsText || ""}
+            onChange={(e) => {
+              setDocForm((prev: any) => ({ ...prev, afterTotalsText: e.target.value }));
+              setDirty(true);
+            }}
+            className="min-h-[320px] resize-y font-mono text-sm leading-5"
+            placeholder="Endtext eingeben..."
+            data-testid="after-totals-textarea"
+          />
+          <DialogFooter>
+            <Button type="button" onClick={() => setAfterTotalsEditOpen(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <NettosummeDetailDialog
         open={nettoDetailOpen}
         onClose={() => setNettoDetailOpen(false)}
@@ -2437,13 +2460,12 @@ export default function DocumentEditorPage() {
                           {afterTotalsTextBlocks.map((block: any, blockIdx: number) => {
                             const blockText = block.data?.text || "";
                             if (!blockText.trim()) return null;
-                            const singleBlock = totalAfterTotalsTextBlocks === 1;
                             return (
                               <div
                                 key={`after-totals-text-${page.pageNumber}-${blockIdx}`}
                                 data-testid={block.splitPartIndex === 0 ? "after-totals-text-edit" : "after-totals-text-block"}
-                                contentEditable={singleBlock}
-                                suppressContentEditableWarning
+                                role="button"
+                                tabIndex={0}
                                 style={{
                                   fontFamily: "Helvetica, Arial, sans-serif",
                                   fontSize: "7.6pt",
@@ -2453,15 +2475,16 @@ export default function DocumentEditorPage() {
                                   padding: block.splitPartIndex === 0 ? "10px 0 3px 0" : "0 0 3px 0",
                                   outline: "none",
                                   minHeight: "12px",
-                                  cursor: singleBlock ? "text" : "default",
+                                  cursor: "text",
                                 }}
-                                onBlur={singleBlock ? (e) => {
-                                  const newText = e.currentTarget.innerText || "";
-                                  if (newText !== (docForm.afterTotalsText || "")) {
-                                    setDocForm((prev: any) => ({ ...prev, afterTotalsText: newText }));
-                                    setDirty(true);
+                                title="Floskel / Endtext bearbeiten"
+                                onClick={() => setAfterTotalsEditOpen(true)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setAfterTotalsEditOpen(true);
                                   }
-                                } : undefined}
+                                }}
                                 dangerouslySetInnerHTML={{ __html: blockText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") }}
                               />
                             );
@@ -2476,6 +2499,8 @@ export default function DocumentEditorPage() {
                           <div
                             key={`after-totals-text-cont-${page.pageNumber}-${blockIdx}`}
                             data-testid="after-totals-text-block"
+                            role="button"
+                            tabIndex={0}
                             style={{
                               fontFamily: "Helvetica, Arial, sans-serif",
                               fontSize: "7.6pt",
@@ -2485,6 +2510,15 @@ export default function DocumentEditorPage() {
                               padding: "0 0 3px 0",
                               outline: "none",
                               minHeight: "12px",
+                              cursor: "text",
+                            }}
+                            title="Floskel / Endtext bearbeiten"
+                            onClick={() => setAfterTotalsEditOpen(true)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setAfterTotalsEditOpen(true);
+                              }
                             }}
                             dangerouslySetInnerHTML={{ __html: blockText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") }}
                           />
