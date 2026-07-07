@@ -17,6 +17,7 @@
 import type { DocumentItemData, ResolvedTemplate, PageModel, LayoutBlock } from "../types";
 import { estimateItemHeight, estimateTextBlockHeight, estimateWrappedLines, splitTextAtWrappedLine, HEIGHTS } from "./estimate-item-height";
 import { countsForCarryForward, getLayoutBlockType, isClosingType, isTextType } from "../position-types";
+import { cleanHapakTextBlock } from "../hapak-text-artifacts";
 
 function parseNum(val: string | number | null | undefined): number {
   if (val === null || val === undefined) return 0;
@@ -68,9 +69,14 @@ export function paginateDocument(
   const skontoItems = showSkonto
     ? allItems.filter(item => item.type === "skonto")
     : [];
-  const endTexte: DocumentItemData[] = allItems.filter(
-    item => item.afterTotals && item.type !== "abschluss" && item.type !== "skonto",
-  );
+  const endTexte: DocumentItemData[] = allItems.filter(item => {
+    if (!item.afterTotals || item.type === "abschluss" || item.type === "skonto") return false;
+    if (isTextType(item.type)) {
+      const visibleText = cleanHapakTextBlock(item.title || item.description || "");
+      if (!visibleText) return false;
+    }
+    return true;
+  });
 
   const descCol = template.workArea?.spalten?.find(
     s => (s.name || "").toLowerCase().includes("bezeichnung") || (s.name || "").toLowerCase().includes("beschreibung")
@@ -202,34 +208,51 @@ export function paginateDocument(
       return;
     }
 
-    const ZONE_LINE_H = 14;
+    const ZONE_LINE_H = HEIGHTS.TEXT_LINE_HEIGHT;
     const ZONE_CPL = 85;
     const htmlMode = isHtmlContent(text);
     const paragraphs = htmlMode ? splitHtmlIntoParagraphs(text) : text.split("\n");
     let currentParagraphs: string[] = [];
-    let currentPartH = 6;
+    let currentPartH = 4;
+    let splitPartIndex = 0;
 
     const flushTextPart = () => {
       if (currentParagraphs.length === 0) return;
       const partText = htmlMode ? currentParagraphs.join("") : currentParagraphs.join("\n");
+      const plainPartText = htmlMode ? stripHtml(partText) : partText;
+      if (!plainPartText.trim()) {
+        currentParagraphs = [];
+        currentPartH = 4;
+        return;
+      }
       const partH = currentPartH;
       currentBlocks.push({
         type: blockType,
         estimatedHeight: partH,
         data: { text: partText },
+        splitPart: splitPartIndex === 0 ? "top" : "bottom",
+        splitClipHeight: partH,
+        splitPartIndex: splitPartIndex++,
       });
       currentHeight += partH;
       currentParagraphs = [];
-      currentPartH = 6;
+      currentPartH = 4;
+    };
+
+    const ensureWritablePage = () => {
+      const minUsefulSpace = ZONE_LINE_H + 4;
+      if (availableHeight() - currentHeight < minUsefulSpace && currentBlocks.length > 0) {
+        flushPage();
+      }
     };
 
     for (let pi = 0; pi < paragraphs.length; pi++) {
-      const para = paragraphs[pi];
-      const plainText = htmlMode ? stripHtml(para) : para;
-      const paraLines = plainText.trim().length === 0
+      let para = paragraphs[pi];
+      let plainText = htmlMode ? stripHtml(para) : para;
+      let paraLines = plainText.trim().length === 0
         ? 1
         : Math.max(1, Math.ceil(plainText.length / ZONE_CPL));
-      const paraH = paraLines * ZONE_LINE_H;
+      let paraH = paraLines * ZONE_LINE_H;
 
       let avail = availableHeight() - currentHeight;
       if (avail < 0) avail = 0;
@@ -239,8 +262,28 @@ export function paginateDocument(
         flushPage();
       }
 
-      if (currentParagraphs.length === 0 && currentHeight >= availableHeight()) {
-        if (currentBlocks.length > 0) flushPage();
+      ensureWritablePage();
+
+      avail = availableHeight() - currentHeight;
+      const usableLines = Math.max(1, Math.floor(Math.max(0, avail - currentPartH) / ZONE_LINE_H));
+
+      if (!htmlMode && paraLines > usableLines) {
+        while (para) {
+          ensureWritablePage();
+          const freshAvail = availableHeight() - currentHeight;
+          const maxLines = Math.max(1, Math.floor(Math.max(0, freshAvail - currentPartH) / ZONE_LINE_H));
+          const [part, rest] = splitTextAtWrappedLine(para, maxLines, ZONE_CPL);
+          const partText = part || para;
+          const partLines = Math.max(1, estimateWrappedLines(partText, ZONE_CPL));
+          currentParagraphs.push(partText);
+          currentPartH += partLines * ZONE_LINE_H;
+          para = rest;
+          if (para) {
+            flushTextPart();
+            flushPage();
+          }
+        }
+        continue;
       }
 
       currentParagraphs.push(para);
@@ -595,14 +638,28 @@ export function paginateDocument(
 
   // ─── Letzte Seite abschließen ──────────────────────────────────────────────
 
-  const hasContentBlocks = currentBlocks.some(b => b.type !== "carryForward");
+  const isVisibleContentBlock = (block: LayoutBlock) => {
+    if (block.type === "carryForward") return false;
+    if (
+      (block.type === "beforeWorkTextBlock" ||
+        block.type === "beforeTotalsTextBlock" ||
+        block.type === "afterTotalsTextBlock") &&
+      !stripHtml(String(block.data?.text ?? "")).trim()
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const hasContentBlocks = currentBlocks.some(isVisibleContentBlock);
 
   if (hasContentBlocks || pages.length === 0) {
-    const pageIsAfterTotals = currentBlocks.every(b => AFTER_TOTALS_TYPES.has(b.type));
+    const visibleBlocks = currentBlocks.filter(isVisibleContentBlock);
+    const pageIsAfterTotals = visibleBlocks.length > 0 && visibleBlocks.every(b => AFTER_TOTALS_TYPES.has(b.type));
     pages.push({
       pageNumber: currentPageNum,
       isFirstPage: currentPageNum === 1,
-      blocks: currentBlocks,
+      blocks: currentBlocks.filter((block) => isVisibleContentBlock(block) || block.type === "carryForward"),
       carryForwardIn: pageIsAfterTotals ? 0 : carryForwardIn,
       carryForwardOut: 0,
       remainingHeight: Math.max(0, availableHeight() - currentHeight),

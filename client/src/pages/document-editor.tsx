@@ -43,6 +43,7 @@ import {
 import { recalcJumboFromChildren } from "@shared/document-engine/jumbo";
 import { normalizeDocumentCreateType } from "@shared/document-engine/document-types";
 import { normalizeDocumentTypeLabel } from "@shared/document-engine/document-title";
+import { cleanHapakTextBlock } from "@shared/document-engine/hapak-text-artifacts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1084,6 +1085,14 @@ export default function DocumentEditorPage() {
     [docForm.beforeWorkText, docForm.headerText, docForm.beforeTotalsText, docForm.footerText, docForm.afterTotalsText, docForm.skontoImDokument, items],
   );
 
+  const isVisibleAfterTotalsItem = useCallback((item: EditorItem) => {
+    if (!item.afterTotals || item.type === "skonto") return false;
+    if (["freitext", "floskel", "text"].includes(item.type || "")) {
+      return !!cleanHapakTextBlock(item.title || item.description || "");
+    }
+    return true;
+  }, []);
+
   const enginePages = useMemoReact(
     () => paginateDocument(items, resolvedTemplate, visibleExpandedJumbos, editorZones, undefined, docForm.internpositionenVerbergen !== false),
     [items, resolvedTemplate, visibleExpandedJumbos, editorZones, docForm.internpositionenVerbergen],
@@ -1660,6 +1669,11 @@ export default function DocumentEditorPage() {
                   }
                   const totalCols = 6 + (showKalk ? 3 : 0);
                   const isAfterTotals = page.isAfterTotals === true;
+                  const afterTotalsTextBlocks = page.blocks.filter((b: any) => b.type === "afterTotalsTextBlock");
+                  const totalAfterTotalsTextBlocks = enginePages.reduce(
+                    (sum, ep) => sum + ep.blocks.filter((b: any) => b.type === "afterTotalsTextBlock").length,
+                    0,
+                  );
 
                   return (
                     <A4PageWrapper
@@ -2334,15 +2348,14 @@ export default function DocumentEditorPage() {
                             data-testid="after-totals-zone"
                             onContextMenu={handleAfterTotalsContextMenu}
                           >
-                            {items.some(it => it.afterTotals && it.type !== "skonto") && (
+                            {items.some(isVisibleAfterTotalsItem) && (
                               <table
                                 className="w-full border-collapse table-fixed mt-3"
                                 style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10pt" }}
                               >
                                 <tbody>
                                 {items.map((item, index) => {
-                                  if (!item.afterTotals) return null;
-                                  if (item.type === "skonto") return null;
+                                  if (!isVisibleAfterTotalsItem(item)) return null;
                                   return (
                                     <PositionRow
                                       key={item._clientId}
@@ -2421,34 +2434,62 @@ export default function DocumentEditorPage() {
                               </table>
                             )}
                           </div>
-                          {editorZones.afterTotalsText && (
-                            <div
-                              data-testid="after-totals-text-edit"
-                              contentEditable
-                              suppressContentEditableWarning
-                              style={{
-                                fontFamily: "Helvetica, Arial, sans-serif",
-                                fontSize: "10pt",
-                                lineHeight: "1.35",
-                                whiteSpace: "pre-wrap",
-                                wordBreak: "break-word",
-                                padding: "8px 0 4px 0",
-                                outline: "none",
-                                minHeight: "14px",
-                                cursor: "text",
-                              }}
-                              onBlur={(e) => {
-                                const newText = e.currentTarget.innerText || "";
-                                if (newText !== (docForm.afterTotalsText || "")) {
-                                  setDocForm((prev: any) => ({ ...prev, afterTotalsText: newText }));
-                                  setDirty(true);
-                                }
-                              }}
-                              dangerouslySetInnerHTML={{ __html: (editorZones.afterTotalsText || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") }}
-                            />
-                          )}
+                          {afterTotalsTextBlocks.map((block: any, blockIdx: number) => {
+                            const blockText = block.data?.text || "";
+                            if (!blockText.trim()) return null;
+                            const singleBlock = totalAfterTotalsTextBlocks === 1;
+                            return (
+                              <div
+                                key={`after-totals-text-${page.pageNumber}-${blockIdx}`}
+                                data-testid={block.splitPartIndex === 0 ? "after-totals-text-edit" : "after-totals-text-block"}
+                                contentEditable={singleBlock}
+                                suppressContentEditableWarning
+                                style={{
+                                  fontFamily: "Helvetica, Arial, sans-serif",
+                                  fontSize: "7.6pt",
+                                  lineHeight: "1.22",
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-word",
+                                  padding: block.splitPartIndex === 0 ? "10px 0 3px 0" : "0 0 3px 0",
+                                  outline: "none",
+                                  minHeight: "12px",
+                                  cursor: singleBlock ? "text" : "default",
+                                }}
+                                onBlur={singleBlock ? (e) => {
+                                  const newText = e.currentTarget.innerText || "";
+                                  if (newText !== (docForm.afterTotalsText || "")) {
+                                    setDocForm((prev: any) => ({ ...prev, afterTotalsText: newText }));
+                                    setDirty(true);
+                                  }
+                                } : undefined}
+                                dangerouslySetInnerHTML={{ __html: blockText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") }}
+                              />
+                            );
+                          })}
                         </>
                       )}
+
+                      {pageIdx !== summaryPageIdx && afterTotalsTextBlocks.map((block: any, blockIdx: number) => {
+                        const blockText = block.data?.text || "";
+                        if (!blockText.trim()) return null;
+                        return (
+                          <div
+                            key={`after-totals-text-cont-${page.pageNumber}-${blockIdx}`}
+                            data-testid="after-totals-text-block"
+                            style={{
+                              fontFamily: "Helvetica, Arial, sans-serif",
+                              fontSize: "7.6pt",
+                              lineHeight: "1.22",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              padding: "0 0 3px 0",
+                              outline: "none",
+                              minHeight: "12px",
+                            }}
+                            dangerouslySetInnerHTML={{ __html: blockText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") }}
+                          />
+                        );
+                      })}
 
 
                     </A4PageWrapper>

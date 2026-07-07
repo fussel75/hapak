@@ -997,8 +997,9 @@ describe("document editor skonto UX guards", () => {
       editorSource.indexOf("editorZones.afterTotalsText", editorSource.indexOf('data-testid="after-totals-zone"')),
     );
 
-    assert.match(afterTotalsZone, /items\.some\(it => it\.afterTotals && it\.type !== "skonto"\)/);
-    assert.match(afterTotalsZone, /if \(item\.type === "skonto"\) return null;/);
+    assert.match(afterTotalsZone, /items\.some\(isVisibleAfterTotalsItem\)/);
+    assert.match(afterTotalsZone, /if \(!isVisibleAfterTotalsItem\(item\)\) return null;/);
+    assert.match(editorSource, /item\.type === "skonto"/);
   });
 });
 
@@ -3207,6 +3208,52 @@ describe("document pagination", () => {
     assert.equal(visibleSummary?.estimatedHeight, 118);
     assert.equal(hiddenSummary?.estimatedHeight, 80);
     assert.equal(hidden.some((page) => page.blocks.some((block) => block.type === "skontoRow")), false);
+  });
+
+  it("splits long after-totals floskel text before it can run into the footer", () => {
+    const items = [
+      item({ _clientId: "net", type: "nettosumme", title: "Nettosumme" }),
+      item({ _clientId: "sum", type: "gesamtsumme", title: "Gesamtsumme" }),
+    ];
+    const longAfterTotalsText = [
+      "Wir sind ueberzeugt Ihnen ein faires Angebot unterbreitet zu haben.",
+      "Gerne wuerden wir den Auftrag fuer Sie ausfuehren.",
+      "An unser Angebot halten wir uns 4 Wochen gebunden.",
+      "Wir behalten uns vor, Preisaenderungen von Vorlieferanten geltend zu machen.",
+      "Es gilt stets der zum Leistungszeitpunkt gueltige Mehrwertsteuersatz.",
+      "Saemtliche Montagekosten sind unter normalen Voraussetzungen kalkuliert.",
+      "Zugaenglichkeit der Arbeitsbereiche wird vorausgesetzt.",
+      "Erforderliche Extraarbeiten werden vor Ausfuehrung besprochen.",
+    ].join("\n");
+
+    const pages = paginateDocument(items, template, undefined, { afterTotalsText: `${longAfterTotalsText}\n\n` });
+    const afterTextBlocks = pages.flatMap((page) =>
+      page.blocks
+        .filter((block) => block.type === "afterTotalsTextBlock")
+        .map((block) => ({ page: page.pageNumber, block })),
+    );
+
+    assert.equal(afterTextBlocks.length > 1, true);
+    assert.equal(afterTextBlocks[0].page, 1);
+    assert.equal(afterTextBlocks[0].block.splitPart, "top");
+    assert.equal(afterTextBlocks[1].block.splitPart, "bottom");
+    assert.equal(pages.some((page) => page.blocks.every((block) => block.type === "carryForward")), false);
+    assert.equal(afterTextBlocks.every(({ block }) => block.estimatedHeight <= 102), true);
+    assert.equal(afterTextBlocks.every(({ block }) => String(block.data?.text ?? "").trim().length > 0), true);
+    assert.equal(pages.every((page) => page.blocks.some((block) => String(block.data?.text ?? block.type).trim().length > 0)), true);
+  });
+
+  it("ignores imported HAPAK text artifacts after the totals", () => {
+    const items = [
+      item({ _clientId: "net", type: "nettosumme", title: "Nettosumme" }),
+      item({ _clientId: "sum", type: "gesamtsumme", title: "Gesamtsumme" }),
+      item({ _clientId: "artifact", type: "freitext", title: "°0", afterTotals: true }),
+    ];
+
+    const pages = paginateDocument(items, template);
+
+    assert.equal(pages.flatMap((page) => page.blocks).some((block) => block.itemId === "artifact"), false);
+    assert.equal(pages.some((page) => page.blocks.every((block) => block.type === "footerText")), false);
   });
 
   it("includes fixed surcharges in page carry-forward totals", () => {

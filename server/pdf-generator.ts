@@ -1560,8 +1560,8 @@ function drawHeaderText(pdf: PDFKit.PDFDocument, text: string, cl: ColLayout, wf
 function drawFooterText(pdf: PDFKit.PDFDocument, text: string, cl: ColLayout, wf: WorkAreaFonts) {
   let y = pdf.y + 4;
   const areaW = cl.rightEdge - cl.leftEdge;
-  pdf.fontSize(wf.normal.size).font(wf.normal.name).fillColor("#000000")
-    .text(text, cl.leftEdge, y, { width: areaW, lineGap: 1.5 });
+  pdf.fontSize(Math.min(wf.normal.size, 7.6)).font(wf.normal.name).fillColor("#000000")
+    .text(text, cl.leftEdge, y, { width: areaW, lineGap: 0.4 });
 }
 
 function drawRechnungenTable(

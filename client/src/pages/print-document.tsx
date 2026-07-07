@@ -1082,10 +1082,15 @@ function PrintRenderer({ bundle }: { bundle: PrintBundle }) {
                     if (block.type === "beforeWorkTextBlock" || block.type === "afterTotalsTextBlock" || block.type === "beforeTotalsTextBlock") {
                       const zoneText = block.data?.text || "";
                       if (!zoneText.trim()) return null;
+                      const isAfterTotalsText = block.type === "afterTotalsTextBlock";
                       return (
                         <tr key={`zone-${block.type}-${blockIdx}`}>
                           <td colSpan={totalCols} className="py-1 px-0.5 align-top">
-                            <div className="leading-relaxed whitespace-pre-wrap text-gray-700" style={tableFontStyle} dangerouslySetInnerHTML={{ __html: textToHtml(zoneText) }} />
+                            <div
+                              className="whitespace-pre-wrap text-gray-700"
+                              style={isAfterTotalsText ? { fontFamily: "Helvetica, Arial, sans-serif", fontSize: "7.6pt", lineHeight: 1.22 } : tableFontStyle}
+                              dangerouslySetInnerHTML={{ __html: textToHtml(zoneText) }}
+                            />
                           </td>
                         </tr>
                       );
