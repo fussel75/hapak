@@ -850,6 +850,77 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     );
   }
 
+  async function ensureMissingProjectTreeDocumentNodes(projectId: number): Promise<number> {
+    await ensureProjectRootFolder(projectId);
+    const root = await pool.query(
+      `SELECT id FROM project_document_tree
+       WHERE project_id = $1 AND parent_id IS NULL AND node_type = 'folder'
+       ORDER BY sort_order ASC, id ASC
+       LIMIT 1`,
+      [projectId],
+    );
+    const rootId = root.rows[0]?.id;
+    if (!rootId) return 0;
+
+    const docsResult = await pool.query(
+      `SELECT id, parent_document_id, custom_type_label, subject, document_number, date
+       FROM documents
+       WHERE project_id = $1
+       ORDER BY date ASC NULLS LAST, id ASC`,
+      [projectId],
+    );
+    const nodeResult = await pool.query(
+      `SELECT id, document_id
+       FROM project_document_tree
+       WHERE project_id = $1 AND document_id IS NOT NULL`,
+      [projectId],
+    );
+    const byDocumentId = new Map<number, number>();
+    for (const row of nodeResult.rows) {
+      if (row.document_id) byDocumentId.set(Number(row.document_id), Number(row.id));
+    }
+
+    const sortResult = await pool.query(
+      `SELECT COALESCE(MAX(sort_order), 0)::int as max_sort
+       FROM project_document_tree
+       WHERE project_id = $1`,
+      [projectId],
+    );
+    let nextSort = Number(sortResult.rows[0]?.max_sort || 0) + 10;
+    let created = 0;
+    let progressed = true;
+
+    while (progressed) {
+      progressed = false;
+      for (const doc of docsResult.rows) {
+        const docId = Number(doc.id);
+        if (byDocumentId.has(docId)) continue;
+
+        const parentDocId = doc.parent_document_id ? Number(doc.parent_document_id) : null;
+        if (parentDocId && !byDocumentId.has(parentDocId)) continue;
+        const parentTreeId = parentDocId ? byDocumentId.get(parentDocId)! : Number(rootId);
+        const folderName = String(doc.custom_type_label || doc.subject || doc.document_number || "Dokument")
+          .replace(/^Ordner\s*(?:f\S*r)?\s*/i, "")
+          .replace(/\s+\d{2}-\d{5}.*$/, "")
+          .replace(/\.+$/, "")
+          .trim();
+
+        const inserted = await pool.query(
+          `INSERT INTO project_document_tree (project_id, document_id, parent_id, node_type, folder_name, sort_order)
+           VALUES ($1, $2, $3, 'document', $4, $5)
+           RETURNING id`,
+          [projectId, docId, parentTreeId, folderName || null, nextSort],
+        );
+        byDocumentId.set(docId, Number(inserted.rows[0].id));
+        nextSort += 10;
+        created++;
+        progressed = true;
+      }
+    }
+
+    return created;
+  }
+
   // ========== PROJEKT-DOKUMENTENBAUM ==========
   app.get("/api/projects/:projectId/document-tree", requireAuth, async (req, res, next) => {
     try {
@@ -909,6 +980,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
            AND (child_node.parent_id IS DISTINCT FROM folder_node.id)`,
         [projectId],
       );
+      await ensureMissingProjectTreeDocumentNodes(projectId);
       const nodes = await pool.query(
         `SELECT t.*, d.document_number, d.type as doc_type, d.subject, d.date as doc_date, d.status as doc_status, d.net_total, d.gross_total, d.parent_document_id, d.previously_invoiced, d.custom_type_label, d.tax_rate, d.fibu_netto, d.fibu_brutto,
           (
@@ -932,7 +1004,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const normalizedNodes = nodes.rows.map((row: any) => {
         if (!row.is_hapak_folder_replacement) return row;
         const folderName = String(row.custom_type_label || row.subject || row.document_number || "Ordner")
-          .replace(/^Ordner\s*(für|fuer)?\s*/i, "")
+          .replace(/^Ordner\s*(?:f\S*r)?\s*/i, "")
           .replace(/\s+\d{2}-\d{5}.*$/, "")
           .replace(/\.+$/, "")
           .trim() || "Ordner";

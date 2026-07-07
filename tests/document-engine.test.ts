@@ -2367,6 +2367,23 @@ describe("project document tree persistence", () => {
     assert.match(routesSource, /DELETE FROM project_document_tree t/);
     assert.match(routesSource, /NOT EXISTS \(SELECT 1 FROM documents d WHERE d\.id = t\.document_id\)/);
   });
+
+  it("rebuilds missing HAPAK document tree children from document parent links", () => {
+    const routesSource = fs.readFileSync(path.resolve("server/routes.ts"), "utf8");
+    const helper = routesSource.slice(
+      routesSource.indexOf("async function ensureMissingProjectTreeDocumentNodes"),
+      routesSource.indexOf("// ========== PROJEKT-DOKUMENTENBAUM =========="),
+    );
+    const getTreeRoute = routesSource.slice(
+      routesSource.indexOf('app.get("/api/projects/:projectId/document-tree"'),
+      routesSource.indexOf('app.post("/api/projects/:projectId/document-tree"'),
+    );
+
+    assert.match(helper, /parent_document_id/);
+    assert.match(helper, /byDocumentId\.has\(parentDocId\)/);
+    assert.match(helper, /INSERT INTO project_document_tree/);
+    assert.match(getTreeRoute, /ensureMissingProjectTreeDocumentNodes\(projectId\)/);
+  });
 });
 
 describe("invoice register cache coherence", () => {
