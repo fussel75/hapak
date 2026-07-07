@@ -1,5 +1,6 @@
 import { db, pool } from "./db";
 import { eq, desc, like, ilike, or, and, sql, asc, gte, lte, inArray } from "drizzle-orm";
+import { isHapakTextArtifactLine } from "@shared/document-engine/hapak-text-artifacts";
 import {
   users, customers, contactPersons, projects, documents, documentItems, materials, laborRates, textTemplates, companySettings,
   incomingInvoices, documentAttachments, timeEntries, hourlyRateCalculations, resourcePlans, orderDispositions,
@@ -681,7 +682,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocumentItems(documentId: number): Promise<DocumentItem[]> {
-    return db.select().from(documentItems).where(eq(documentItems.documentId, documentId)).orderBy(documentItems.sortOrder);
+    const items = await db.select().from(documentItems).where(eq(documentItems.documentId, documentId)).orderBy(documentItems.sortOrder);
+    return items.filter((item) => !(item.type === "text" && isHapakTextArtifactLine(item.title)));
   }
 
   async createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem> {

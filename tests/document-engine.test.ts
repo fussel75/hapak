@@ -2569,6 +2569,7 @@ describe("HAPAK JUMBO import", () => {
   it("keeps the imported HAPAK text-artifact repair transactional and previewable", () => {
     const pkg = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
     const source = fs.readFileSync(path.resolve("scripts/hapak-repair-text-artifacts-2026.ts"), "utf8");
+    const storageSource = fs.readFileSync(path.resolve("server/storage.ts"), "utf8");
 
     assert.equal(pkg.scripts["hapak:repair-text:2026"], "tsx scripts/hapak-repair-text-artifacts-2026.ts");
     assert.match(source, /mode: "preview"/);
@@ -2577,6 +2578,10 @@ describe("HAPAK JUMBO import", () => {
     assert.match(source, /await client\.query\("COMMIT"\)/);
     assert.match(source, /await client\.query\("ROLLBACK"\)/);
     assert.match(source, /cleanHapakTextBlock/);
+    assert.match(source, /FROM document_items i/);
+    assert.match(source, /isHapakTextArtifactLine\(row\.title\)/);
+    assert.match(source, /DELETE FROM document_items WHERE id = \$1/);
+    assert.match(storageSource, /isHapakTextArtifactLine\(item\.title\)/);
   });
 
   it("keeps calculated HAPAK JUMBOs as detailed positions with synthetic labor children", () => {
