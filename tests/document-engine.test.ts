@@ -62,6 +62,7 @@ import { buildEditorZones, emptyItem, getJumboChildCount, getJumboChildInsertInd
 import { getSafeTemplateImageUrl } from "../shared/document-engine/template/image-url";
 import { resolveVariables } from "../shared/document-engine/template/resolve-variable";
 import { buildDocumentBundle } from "../server/pdf-generator";
+import { normalizeHapakResponseText } from "../server/response-text-normalizer";
 import { planHapakAttachmentMatch } from "../shared/document-engine/hapak-attachment-matching";
 import { expandHapakDetailedJumbos } from "../shared/document-engine/hapak-jumbo-import";
 
@@ -1828,30 +1829,26 @@ describe("browser smoke workflow", () => {
   it("keeps a one-command local app starter wired", () => {
     const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
     const starter = fs.readFileSync(path.resolve("scripts/ensure-dev-server.ps1"), "utf8");
-    const runner = fs.readFileSync(path.resolve("scripts/run-dev-server.ps1"), "utf8");
 
     assert.equal(
       packageJson.scripts["app:up"],
       "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-dev-server.ps1",
     );
     assert.match(starter, /\/api\/health/);
-    assert.match(starter, /Get-Command powershell\.exe/);
     assert.match(starter, /Remove-Item -LiteralPath \$logPath -Force -ErrorAction SilentlyContinue/);
-    assert.match(starter, /\$runnerArgument = "-NoProfile -ExecutionPolicy Bypass -File `"\$runner`""/);
+    assert.match(starter, /Remove-Item -LiteralPath \$errorLogPath -Force -ErrorAction SilentlyContinue/);
+    assert.match(starter, /codex-primary-runtime\\dependencies\\node\\bin\\node\.exe/);
+    assert.match(starter, /Get-Command node/);
     assert.match(starter, /Start-Process/);
-    assert.match(starter, /-ArgumentList \$runnerArgument/);
+    assert.match(starter, /-ArgumentList @\("node_modules\/tsx\/dist\/cli\.mjs", "server\/index\.ts"\)/);
     assert.match(starter, /-WindowStyle Hidden/);
-    assert.match(starter, /run-dev-server\.ps1/);
+    assert.match(starter, /-RedirectStandardOutput \$logPath/);
+    assert.match(starter, /-RedirectStandardError \$errorLogPath/);
     assert.match(starter, /FRISTD_DEV_LOG/);
     assert.match(starter, /Exitcode: \$\(\$process\.ExitCode\)/);
     assert.match(starter, /Get-Content -LiteralPath \$logPath -Encoding utf8 -Tail 120/);
+    assert.match(starter, /Get-Content -LiteralPath \$errorLogPath -Encoding utf8 -Tail 120/);
     assert.match(starter, /FriStD-Bau ERP gestartet/);
-    assert.match(runner, /\[Console\]::OutputEncoding = \[System\.Text\.UTF8Encoding\]::new\(\)/);
-    assert.match(runner, /\$env:HOST = "127\.0\.0\.1"/);
-    assert.match(runner, /\$env:PORT = "5000"/);
-    assert.match(runner, /FRISTD_DEV_LOG/);
-    assert.match(runner, /Set-Content -LiteralPath \$logPath -Encoding utf8/);
-    assert.match(runner, /Add-Content -LiteralPath \$logPath -Encoding utf8/);
   });
 
   it("keeps local development startup pinned to a modern bundled Node and a real health route", () => {
@@ -2465,6 +2462,10 @@ describe("HAPAK JUMBO import", () => {
     assert.equal(isHapakTextArtifactLine("Leistungszeitraum Mai - Juni 2026"), false);
     assert.equal(repairHapakMojibake("Zulage zur Vorposition: Aush\u00c3\u00b6hen"), "Zulage zur Vorposition: Aushöhen");
     assert.equal(repairHapakMojibake("37,50 m\u00c2\u00b2 Fermacell"), "37,50 m² Fermacell");
+    assert.equal(repairHapakMojibake("St├╝ck"), "Stück");
+    assert.equal(repairHapakMojibake("Gesch├ñftsf├╝hrer"), "Geschäftsführer");
+    assert.equal(repairHapakMojibake("m┬▓"), "m²");
+    assert.equal(repairHapakMojibake("FriStD-Bau ZuB ÔÇô 1-Kopf"), "FriStD-Bau ZuB - 1-Kopf");
 
     assert.equal(
       cleanHapakTextBlock("Heukoppel 92, WP, FbHzg., Demontage FB.\n┬º0"),
@@ -2474,6 +2475,22 @@ describe("HAPAK JUMBO import", () => {
       cleanHapakTextBlock("Zulage zur Vorposition: Aush\u00c3\u00b6hen\n37,50 m\u00c2\u00b2 Fermacell\n\u00c2\u00ba0"),
       "Zulage zur Vorposition: Aushöhen\n37,50 m² Fermacell",
     );
+  });
+
+  it("normalizes HAPAK mojibake in API response text without touching technical fields", () => {
+    const normalized = normalizeHapakResponseText({
+      name: "Gesch├ñftsf├╝hrer",
+      unit: { code: "m┬▓", name: "Quadratmeter" },
+      fields: [{ inhalt: "FriStD-Bau ZuB ÔÇô 1-Kopf" }],
+      email: "post@fristd-bau.com",
+      imageUrl: "/api/uploads/img_680f32b3.jpg",
+    });
+
+    assert.equal(normalized.name, "Geschäftsführer");
+    assert.equal(normalized.unit.code, "m²");
+    assert.equal(normalized.fields[0].inhalt, "FriStD-Bau ZuB - 1-Kopf");
+    assert.equal(normalized.email, "post@fristd-bau.com");
+    assert.equal(normalized.imageUrl, "/api/uploads/img_680f32b3.jpg");
   });
 
   it("keeps the imported HAPAK text-artifact repair transactional and previewable", () => {

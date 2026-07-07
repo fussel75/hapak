@@ -73,6 +73,33 @@ async function login() {
   throw new Error("Login fehlgeschlagen: weder admin/admin noch post@fristd-bau.com/admin funktioniert");
 }
 
+async function assertCoreApiTextIsReadable() {
+  const endpoints = [
+    "/api/editor-settings",
+    "/api/company-settings",
+    "/api/units",
+    "/api/form-templates",
+    "/api/customers?limit=20",
+    "/api/projects",
+  ];
+  const badFragments = [0xc3, 0xc2, 0x251c, 0x252c, 0xd4].map((code) => String.fromCharCode(code));
+  badFragments.push(`${String.fromCharCode(0xd4)}${String.fromCharCode(0xc7)}`);
+  for (const endpoint of endpoints) {
+    const response = await expectOk(`lesbare API-Texte ${endpoint}`, endpoint, {
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+    const body = await response.text();
+    const bad = badFragments.find((fragment) => body.includes(fragment));
+    if (bad) {
+      throw new Error(`Lesbarkeitscheck: ${endpoint} enthaelt weiterhin Mojibake-Fragment ${bad}`);
+    }
+  }
+  console.log("ok zentrale API-Texte ohne sichtbare HAPAK-Zeichenreste");
+}
+
 async function assertImportedHapakInvoiceRegression() {
   const searchResponse = await expectOk("importierte Rechnung 26-00058 suchen", "/api/documents?search=26-00058");
   const searchResult = await searchResponse.json();
@@ -194,6 +221,7 @@ async function assertImportedHapakManualNumberingRegression() {
 await expectOk("app shell", "/");
 await login();
 await expectOk("auth/me", "/api/auth/me");
+await assertCoreApiTextIsReadable();
 const documentsResponse = await expectOk("dokumente", "/api/documents?limit=5");
 const documentsResult = await documentsResponse.json();
 const firstDocument = Array.isArray(documentsResult?.data) ? documentsResult.data[0] : null;

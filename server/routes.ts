@@ -42,6 +42,7 @@ import { registerChatRoutes } from "./replit_integrations/chat";
 import { registerAiRoutes } from "./ai-routes";
 import { aiCompleteWithDocument } from "./ai-providers";
 import { getUploadMimeType, isAllowedSafeImageUpload, resolveUploadPath } from "./upload-security";
+import { normalizeHapakResponseText } from "./response-text-normalizer";
 
 function parsePositiveId(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : parseInt(String(value || ""), 10);
@@ -540,9 +541,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/customers", requireAuth, async (req, res, next) => {
     try {
       const { search, type } = req.query;
-      if (search) return res.json(await storage.searchCustomers(search as string, type as string | undefined));
-      if (type) return res.json(await storage.getCustomersByType(type as string));
-      res.json(await storage.getCustomers());
+      if (search) return res.json(normalizeHapakResponseText(await storage.searchCustomers(search as string, type as string | undefined)));
+      if (type) return res.json(normalizeHapakResponseText(await storage.getCustomersByType(type as string)));
+      res.json(normalizeHapakResponseText(await storage.getCustomers()));
     } catch (err) { next(err); }
   });
 
@@ -561,7 +562,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const c = await storage.getCustomer(parseInt(req.params.id));
       if (!c) return res.status(404).json({ message: "Adresse nicht gefunden" });
-      res.json(c);
+      res.json(normalizeHapakResponseText(c));
     } catch (err) { next(err); }
   });
 
@@ -576,12 +577,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         );
         body.customerNumber = String(result.rows[0]?.next_number || 10000);
       }
-      res.status(201).json(await storage.createCustomer(insertCustomerSchema.parse(body)));
+      res.status(201).json(normalizeHapakResponseText(await storage.createCustomer(insertCustomerSchema.parse(body))));
     } catch (err) { next(err); }
   });
 
   app.patch("/api/customers/:id", requireAuth, async (req, res, next) => {
-    try { res.json(await storage.updateCustomer(parseInt(req.params.id), insertCustomerSchema.partial().parse(req.body))); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.updateCustomer(parseInt(req.params.id), insertCustomerSchema.partial().parse(req.body)))); } catch (err) { next(err); }
   });
 
   app.delete("/api/customers/:id", requireAuth, async (req, res, next) => {
@@ -589,7 +590,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/customers/:id/convert-to-kunde", requireAuth, async (req, res, next) => {
-    try { res.json(await storage.convertToKunde(parseInt(req.params.id))); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.convertToKunde(parseInt(req.params.id)))); } catch (err) { next(err); }
   });
 
   app.get("/api/customers/:id/related", requireAuth, async (req, res, next) => {
@@ -705,8 +706,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/projects", requireAuth, async (req, res, next) => {
     try {
-      if (req.query.customerId) return res.json(await storage.getProjectsByCustomer(parseInt(req.query.customerId as string)));
-      res.json(await storage.getProjects());
+      if (req.query.customerId) return res.json(normalizeHapakResponseText(await storage.getProjectsByCustomer(parseInt(req.query.customerId as string))));
+      res.json(normalizeHapakResponseText(await storage.getProjects()));
     } catch (err) { next(err); }
   });
 
@@ -718,7 +719,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const p = await storage.getProject(parseInt(req.params.id));
       if (!p) return res.status(404).json({ message: "Projekt nicht gefunden" });
-      res.json(p);
+      res.json(normalizeHapakResponseText(p));
     } catch (err) { next(err); }
   });
 
@@ -752,7 +753,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         `INSERT INTO project_document_tree (project_id, document_id, parent_id, node_type, folder_name, sort_order) VALUES ($1, NULL, NULL, 'folder', $2, 0)`,
         [project.id, rootFolderName]
       );
-      res.status(201).json(project);
+      res.status(201).json(normalizeHapakResponseText(project));
     } catch (err) { next(err); }
   });
 
@@ -763,7 +764,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       for (const f of numericFields) {
         if (f in body && (body[f] === "" || body[f] === null)) body[f] = undefined;
       }
-      res.json(await storage.updateProject(parseInt(req.params.id), insertProjectSchema.partial().parse(body)));
+      res.json(normalizeHapakResponseText(await storage.updateProject(parseInt(req.params.id), insertProjectSchema.partial().parse(body))));
     } catch (err) { next(err); }
   });
 
@@ -2376,18 +2377,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/company-settings", requireAuth, async (_req, res, next) => {
-    try { res.json(await storage.getCompanySettings() || null); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.getCompanySettings() || null)); } catch (err) { next(err); }
   });
 
   app.post("/api/company-settings", requireAuth, async (req, res, next) => {
-    try { res.json(await storage.upsertCompanySettings(insertCompanySettingsSchema.parse(req.body))); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.upsertCompanySettings(insertCompanySettingsSchema.parse(req.body)))); } catch (err) { next(err); }
   });
 
   app.get("/api/editor-settings", requireAuth, async (_req, res, next) => {
     try {
       const { editorSettings } = await import("@shared/schema");
       const result = await db.select().from(editorSettings).limit(1);
-      res.json(result[0] || null);
+      res.json(normalizeHapakResponseText(result[0] || null));
     } catch (err) { next(err); }
   });
 
@@ -2951,7 +2952,7 @@ Wenn ein Feld nicht erkennbar ist, setze null. Deutsche Zahlenformate (Komma als
         }
       }
 
-      res.json(updated);
+      res.json(normalizeHapakResponseText(updated));
     } catch (err) { next(err); }
   });
 
@@ -5046,7 +5047,7 @@ Wenn ein Feld nicht erkennbar ist, setze null. Deutsche Zahlenformate (Komma als
         }
         allUnits = await storage.getUnits();
       }
-      res.json(allUnits);
+      res.json(normalizeHapakResponseText(allUnits));
     } catch (err) { next(err); }
   });
 
@@ -5054,14 +5055,14 @@ Wenn ein Feld nicht erkennbar ist, setze null. Deutsche Zahlenformate (Komma als
     try {
       const data = insertUnitSchema.parse(req.body);
       const unit = await storage.createUnit(data);
-      res.status(201).json(unit);
+      res.status(201).json(normalizeHapakResponseText(unit));
     } catch (err) { next(err); }
   });
 
   app.patch("/api/units/:id", requireAuth, async (req, res, next) => {
     try {
       const unit = await storage.updateUnit(parseInt(req.params.id), insertUnitSchema.partial().parse(req.body));
-      res.json(unit);
+      res.json(normalizeHapakResponseText(unit));
     } catch (err) { next(err); }
   });
 
@@ -7409,13 +7410,13 @@ WICHTIG: Antworte NUR mit dem JSON-Array. Kein Markdown, kein Erklärtext.`;
 
   // ========== FORMULARDESIGNER ==========
   app.get("/api/form-templates", requireAuth, async (req, res, next) => {
-    try { res.json(await storage.getFormTemplates()); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.getFormTemplates())); } catch (err) { next(err); }
   });
   app.post("/api/form-templates", requireAuth, async (req, res, next) => {
-    try { res.status(201).json(await storage.createFormTemplate(insertFormTemplateSchema.parse(req.body))); } catch (err) { next(err); }
+    try { res.status(201).json(normalizeHapakResponseText(await storage.createFormTemplate(insertFormTemplateSchema.parse(req.body)))); } catch (err) { next(err); }
   });
   app.patch("/api/form-templates/:id", requireAuth, async (req, res, next) => {
-    try { res.json(await storage.updateFormTemplate(parseInt(req.params.id), insertFormTemplateSchema.partial().parse(req.body))); } catch (err) { next(err); }
+    try { res.json(normalizeHapakResponseText(await storage.updateFormTemplate(parseInt(req.params.id), insertFormTemplateSchema.partial().parse(req.body)))); } catch (err) { next(err); }
   });
   app.delete("/api/form-templates/:id", requireAuth, async (req, res, next) => {
     try { await storage.deleteFormTemplate(parseInt(req.params.id)); res.json({ success: true }); } catch (err) { next(err); }
