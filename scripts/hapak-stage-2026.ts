@@ -270,6 +270,29 @@ function customTypeLabel(row: Row, type: string): string | null {
   return withoutNumber === defaults[type] ? null : withoutNumber;
 }
 
+function isExplicitHapakFolder(row: Row): boolean {
+  return /^Ordner/i.test(S(row.TYPUNDNR));
+}
+
+function cleanHapakFolderName(row: Row): string {
+  const raw = S(row.TYPUNDNR) || S(row.BETREFF) || humanDocumentNumber(row);
+  return repairHapakMojibake(raw)
+    .replace(/^Ordner\s*(für|fuer|for)?\s*/i, "")
+    .replace(/\s+\d{2}-\d{5}.*$/, "")
+    .replace(/\.+$/, "")
+    .trim() || humanDocumentNumber(row);
+}
+
+function isHapakFreeDocumentFolderReplacement(row: Row, positionFiles: Set<string>, childNames: Set<string>): boolean {
+  if (mapDocumentType(row) !== "freies_dokument") return false;
+  const name = S(row.NAME).toUpperCase();
+  if (!name || !childNames.has(name)) return false;
+  if (positionFiles.has(name)) return false;
+  const hasMoney = Math.abs(N(row.NETTO)) > 0.005 || Math.abs(N(row.BETRAG)) > 0.005;
+  if (hasMoney) return false;
+  return true;
+}
+
 function mainRowKey(row: Row): string {
   return `${S(row.ART) || "?"}/${S(row.TYP) || "?"}`;
 }
@@ -749,6 +772,20 @@ async function run(): Promise<void> {
 
   const documentByName = new Map(documentsAll.map((row) => [S(row.NAME).toUpperCase(), row]));
   const documents2026ByName = new Map(documents2026.map((row) => [S(row.NAME).toUpperCase(), row]));
+  const childDocumentParentNames = new Set(
+    documents2026.map((row) => S(row.BEZUGNAME).toUpperCase()).filter(Boolean),
+  );
+  const positionFiles = new Set<string>();
+  await Promise.all(documents2026.map(async (row) => {
+    const name = S(row.NAME).toUpperCase();
+    if (name && await dbfExists(path.join(source, "Daten", `${S(row.NAME)}.DBF`))) {
+      positionFiles.add(name);
+    }
+  }));
+  const folderReplacementRows = documents2026.filter((row) =>
+    isHapakFreeDocumentFolderReplacement(row, positionFiles, childDocumentParentNames),
+  );
+  const folderReplacementNames = new Set(folderReplacementRows.map((row) => S(row.NAME).toUpperCase()));
   const relevantCustomerNumbers = new Set<string>();
   const projectSourceRows = new Map<string, Row>();
   const issues: StageIssue[] = [];
@@ -824,6 +861,7 @@ async function run(): Promise<void> {
 
   const documents = documents2026
     .filter((row) => mapDocumentType(row) !== "projektkopf")
+    .filter((row) => !folderReplacementNames.has(S(row.NAME).toUpperCase()))
     .map((row): StageDocument => {
       const type = mapDocumentType(row);
       const netTotal = N(row.NETTO);
@@ -852,7 +890,23 @@ async function run(): Promise<void> {
       };
     });
 
-  const documentTree = documents
+  const folderReplacementTree = folderReplacementRows
+    .filter((row) => S(row.PROJNAME))
+    .map((row, idx) => ({
+      projectKey: S(row.PROJNAME),
+      documentNumber: null,
+      importSourceKey: S(row.NAME),
+      parentDocumentNumber: S(row.BEZUGNAME) || null,
+      parentHapakName: S(row.BEZUGNAME) || null,
+      nodeType: "folder",
+      folderName: cleanHapakFolderName(row),
+      sortOrder: idx,
+      source: { table: "DOKUMENT", key: S(row.NAME), typUndNr: S(row.TYPUNDNR), folderReplacement: true },
+    }));
+
+  const documentTree = [
+    ...folderReplacementTree,
+    ...documents
     .filter((doc) => doc.projectKey)
     .map((doc, idx) => ({
       projectKey: doc.projectKey,
@@ -861,9 +915,19 @@ async function run(): Promise<void> {
       parentDocumentNumber: doc.parentHapakName || null,
       parentHapakName: doc.parentHapakName || null,
       nodeType: "document",
-      sortOrder: idx,
+      sortOrder: folderReplacementTree.length + idx,
       source: { table: "DOKUMENT", key: doc.hapakName },
-    }));
+    })),
+  ];
+
+  if (folderReplacementRows.length > 0) {
+    issues.push({
+      severity: "info",
+      code: "hapak_free_document_folder_replacements",
+      message: `${folderReplacementRows.length} leere freie HAPAK-Dokumente mit Kind-Dokumenten werden als Projektordner statt als Arbeitsdokumente uebernommen.`,
+      examples: folderReplacementRows.slice(0, 20).map((row) => `${S(row.NAME)} | ${S(row.TYPUNDNR) || S(row.BETREFF)}`),
+    });
+  }
 
   for (const doc of documents) {
     if (doc.parentHapakName && !documentByName.has(doc.parentHapakName.toUpperCase())) {

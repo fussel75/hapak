@@ -64,6 +64,29 @@ import {
 
 const FIBU_OPEN_AMOUNT_SQL = "GREATEST(COALESCE(f.offen::numeric, 0), 0)";
 
+function visibleWorkDocumentCondition() {
+  return sql`NOT (
+    ${documents.importSource} = 'hapak'
+    AND ${documents.type} = 'freies_dokument'
+    AND COALESCE(${documents.netTotal}, 0) = 0
+    AND COALESCE(${documents.grossTotal}, 0) = 0
+    AND NOT EXISTS (SELECT 1 FROM document_items di WHERE di.document_id = ${documents.id})
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM project_document_tree parent_node
+        JOIN project_document_tree child_node ON child_node.parent_id = parent_node.id
+        WHERE parent_node.document_id = ${documents.id}
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM documents child_doc
+        WHERE child_doc.parent_document_id = ${documents.id}
+      )
+    )
+  )`;
+}
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -504,11 +527,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocuments(): Promise<Document[]> {
-    return db.select().from(documents).orderBy(desc(documents.createdAt));
+    return db.select().from(documents).where(visibleWorkDocumentCondition()).orderBy(desc(documents.createdAt));
   }
 
   async getDocumentsPaginated(page: number, limit: number, search?: string, type?: string, types?: string[], excludeType?: string): Promise<{ data: Document[]; total: number }> {
-    const conditions = [];
+    const conditions = [visibleWorkDocumentCondition()];
     if (types && types.length > 0) {
       conditions.push(inArray(documents.type, types));
     } else if (type && type !== "all") {
@@ -551,11 +574,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocumentsByProject(projectId: number): Promise<Document[]> {
-    return db.select().from(documents).where(eq(documents.projectId, projectId)).orderBy(desc(documents.date));
+    return db.select().from(documents).where(and(eq(documents.projectId, projectId), visibleWorkDocumentCondition())).orderBy(desc(documents.date));
   }
 
   async getDocumentsByCustomer(customerId: number): Promise<Document[]> {
-    return db.select().from(documents).where(eq(documents.customerId, customerId)).orderBy(desc(documents.date));
+    return db.select().from(documents).where(and(eq(documents.customerId, customerId), visibleWorkDocumentCondition())).orderBy(desc(documents.date));
   }
 
   async getDocumentsByType(type: string): Promise<Document[]> {

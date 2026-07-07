@@ -2048,6 +2048,28 @@ describe("hapak import analysis", () => {
     assert.doesNotMatch(source, /DATABASE_URL/);
   });
 
+  it("treats empty HAPAK free-document folder replacements as project tree folders", () => {
+    const source = fs.readFileSync(path.resolve("scripts/hapak-stage-2026.ts"), "utf8");
+    const routesSource = fs.readFileSync(path.resolve("server/routes.ts"), "utf8");
+    const storageSource = fs.readFileSync(path.resolve("server/storage.ts"), "utf8");
+
+    assert.match(source, /function isHapakFreeDocumentFolderReplacement/);
+    assert.match(source, /mapDocumentType\(row\) !== "freies_dokument"/);
+    assert.match(source, /childDocumentParentNames/);
+    assert.match(source, /folderReplacementNames/);
+    assert.match(source, /\.filter\(\(row\) => !folderReplacementNames\.has/);
+    assert.match(source, /nodeType: "folder"/);
+    assert.match(source, /hapak_free_document_folder_replacements/);
+    assert.match(routesSource, /is_hapak_folder_replacement/);
+    assert.match(routesSource, /node_type: "folder"/);
+    assert.match(routesSource, /child_doc\.parent_document_id = d\.id/);
+    assert.match(routesSource, /child_doc\.parent_document_id = folder_node\.document_id/);
+    assert.match(storageSource, /function visibleWorkDocumentCondition/);
+    assert.match(storageSource, /project_document_tree parent_node/);
+    assert.match(storageSource, /child_doc\.parent_document_id =/);
+    assert.match(storageSource, /visibleWorkDocumentCondition\(\)/);
+  });
+
   it("keeps the first 2026 HAPAK importer guarded by preview, blockers and a transaction", () => {
     const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
     const source = fs.readFileSync(path.resolve("scripts/hapak-import-stage-2026.ts"), "utf8");

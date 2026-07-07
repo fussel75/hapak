@@ -863,8 +863,65 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
            AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.id = t.document_id)`,
         [projectId]
       );
+      await pool.query(
+        `WITH root AS (
+           SELECT id FROM project_document_tree
+           WHERE project_id = $1 AND parent_id IS NULL AND node_type = 'folder'
+           ORDER BY sort_order ASC, id ASC
+           LIMIT 1
+         ),
+         folder_docs AS (
+           SELECT d.id, d.project_id,
+             COALESCE(
+               NULLIF(regexp_replace(COALESCE(d.custom_type_label, d.subject, d.document_number), '^Ordner\\s*(für|fuer)?\\s*', '', 'i'), ''),
+               d.document_number
+             ) AS folder_name,
+             COALESCE((SELECT MAX(sort_order) FROM project_document_tree WHERE project_id = $1), 0)
+               + ROW_NUMBER() OVER (ORDER BY d.date, d.id) * 10 AS sort_order
+           FROM documents d
+           WHERE d.project_id = $1
+             AND d.import_source = 'hapak'
+             AND d.type = 'freies_dokument'
+             AND COALESCE(d.net_total, 0) = 0
+             AND COALESCE(d.gross_total, 0) = 0
+             AND NOT EXISTS (SELECT 1 FROM document_items di WHERE di.document_id = d.id)
+             AND EXISTS (SELECT 1 FROM documents child_doc WHERE child_doc.parent_document_id = d.id)
+             AND NOT EXISTS (SELECT 1 FROM project_document_tree existing WHERE existing.project_id = $1 AND existing.document_id = d.id)
+         )
+         INSERT INTO project_document_tree (project_id, document_id, parent_id, node_type, folder_name, sort_order)
+         SELECT folder_docs.project_id, folder_docs.id, root.id, 'document', folder_docs.folder_name, folder_docs.sort_order
+         FROM folder_docs
+         CROSS JOIN root`,
+        [projectId],
+      );
+      await pool.query(
+        `UPDATE project_document_tree child_node
+         SET parent_id = folder_node.id
+         FROM documents child_doc
+        JOIN project_document_tree folder_node
+          ON child_doc.parent_document_id = folder_node.document_id
+          AND folder_node.project_id = $1
+         WHERE child_node.project_id = $1
+           AND child_node.document_id = child_doc.id
+           AND child_doc.project_id = $1
+           AND child_doc.parent_document_id IS NOT NULL
+           AND child_node.id != folder_node.id
+           AND (child_node.parent_id IS DISTINCT FROM folder_node.id)`,
+        [projectId],
+      );
       const nodes = await pool.query(
         `SELECT t.*, d.document_number, d.type as doc_type, d.subject, d.date as doc_date, d.status as doc_status, d.net_total, d.gross_total, d.parent_document_id, d.previously_invoiced, d.custom_type_label, d.tax_rate, d.fibu_netto, d.fibu_brutto,
+          (
+            d.import_source = 'hapak'
+            AND d.type = 'freies_dokument'
+            AND COALESCE(d.net_total, 0) = 0
+            AND COALESCE(d.gross_total, 0) = 0
+            AND NOT EXISTS (SELECT 1 FROM document_items di WHERE di.document_id = d.id)
+            AND (
+              EXISTS (SELECT 1 FROM project_document_tree c WHERE c.parent_id = t.id)
+              OR EXISTS (SELECT 1 FROM documents child_doc WHERE child_doc.parent_document_id = d.id)
+            )
+          ) as is_hapak_folder_replacement,
           COALESCE((SELECT SUM((v->>'grossAmount')::numeric) FROM jsonb_array_elements(d.abschlag_verrechnungen) v), 0) as verrechnungen_sum
          FROM project_document_tree t
          LEFT JOIN documents d ON t.document_id = d.id
@@ -872,7 +929,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
          ORDER BY t.sort_order ASC, t.id ASC`,
         [projectId]
       );
-      res.json(nodes.rows);
+      const normalizedNodes = nodes.rows.map((row: any) => {
+        if (!row.is_hapak_folder_replacement) return row;
+        const folderName = String(row.custom_type_label || row.subject || row.document_number || "Ordner")
+          .replace(/^Ordner\s*(für|fuer)?\s*/i, "")
+          .replace(/\s+\d{2}-\d{5}.*$/, "")
+          .replace(/\.+$/, "")
+          .trim() || "Ordner";
+        return {
+          ...row,
+          node_type: "folder",
+          folder_name: folderName,
+          document_id: null,
+          document_number: null,
+          doc_type: null,
+          subject: null,
+          doc_date: null,
+          doc_status: null,
+          net_total: null,
+          gross_total: null,
+        };
+      });
+      res.json(normalizeHapakResponseText(normalizedNodes));
     } catch (err) { next(err); }
   });
 
