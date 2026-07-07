@@ -1249,6 +1249,144 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ released: count });
   });
 
+  app.get("/api/project-finance-summary/:projectId", requireAuth, async (req, res, next) => {
+    try {
+      const projectId = parseInt(String(req.params.projectId), 10);
+      if (!Number.isFinite(projectId)) return res.status(400).json({ message: "Ungueltige Projekt-ID" });
+
+      const projectResult = await pool.query(
+        `SELECT id, project_number, cost_center, import_source_key
+         FROM projects
+         WHERE id = $1`,
+        [projectId],
+      );
+      const project = projectResult.rows[0];
+      if (!project) return res.status(404).json({ message: "Projekt nicht gefunden" });
+
+      const ktrCandidates = Array.from(new Set([
+        project.cost_center,
+        project.import_source_key,
+        project.project_number,
+      ].filter(Boolean).map((value: string) => String(value).trim())));
+
+      const empty = {
+        count: 0,
+        erloese: 0,
+        gutschriften: 0,
+        skonto: 0,
+        minderung: 0,
+        netto: 0,
+        steuer: 0,
+        brutto: 0,
+        bezahlt: 0,
+        offen: 0,
+        rows: [],
+      };
+      if (ktrCandidates.length === 0) {
+        return res.json({ projectId, ktr: null, ktrCandidates, source: "fibu_buchungen", outgoing: empty, incoming: empty });
+      }
+
+      const summarySql = `
+        SELECT
+          COUNT(*) FILTER (WHERE typ = 'HR')::int as count,
+          COALESCE(SUM(CASE WHEN typ = 'HR' THEN COALESCE(netto::numeric, 0) ELSE 0 END), 0)::float as erloese,
+          COALESCE(SUM(CASE WHEN typ = 'HG' THEN ABS(COALESCE(netto::numeric, 0)) ELSE 0 END), 0)::float as gutschriften,
+          COALESCE(SUM(CASE WHEN typ = 'HR' THEN COALESCE(sk_betrag::numeric, 0) ELSE 0 END), 0)::float as skonto,
+          COALESCE(SUM(CASE
+            WHEN typ = 'HR' AND COALESCE(betrag::numeric, 0) > 0 AND COALESCE(netto::numeric, 0) > 0
+              THEN ROUND((COALESCE(sk_betrag::numeric, 0) * netto::numeric / betrag::numeric)::numeric, 2)
+            ELSE 0
+          END), 0)::float as skonto_netto,
+          COALESCE(SUM(CASE WHEN typ = 'HR' THEN COALESCE(minderung::numeric, 0) ELSE 0 END), 0)::float as minderung,
+          COALESCE(SUM(CASE
+            WHEN typ = 'HR' AND COALESCE(betrag::numeric, 0) > 0 AND COALESCE(netto::numeric, 0) > 0
+              THEN ROUND((COALESCE(minderung::numeric, 0) * netto::numeric / betrag::numeric)::numeric, 2)
+            ELSE 0
+          END), 0)::float as minderung_netto,
+          COALESCE(SUM(CASE
+            WHEN typ = 'HR' THEN COALESCE(netto::numeric, 0)
+            WHEN typ = 'HG' THEN -ABS(COALESCE(netto::numeric, 0))
+            ELSE 0
+          END), 0)::float as netto_vor_abzug,
+          COALESCE(SUM(CASE
+            WHEN typ = 'HR' THEN COALESCE(betrag::numeric, 0) - COALESCE(netto::numeric, 0)
+            WHEN typ = 'HG' THEN -(ABS(COALESCE(betrag::numeric, 0)) - ABS(COALESCE(netto::numeric, 0)))
+            ELSE 0
+          END), 0)::float as steuer_vor_abzug,
+          COALESCE(SUM(CASE
+            WHEN typ = 'HR' THEN COALESCE(betrag::numeric, COALESCE(brutto::numeric, 0))
+            WHEN typ = 'HG' THEN -ABS(COALESCE(betrag::numeric, COALESCE(brutto::numeric, 0)))
+            ELSE 0
+          END), 0)::float as brutto_vor_abzug,
+          COALESCE(SUM(COALESCE(zahlung::numeric, 0)), 0)::float as bezahlt,
+          COALESCE(SUM(GREATEST(COALESCE(offen::numeric, 0), 0)), 0)::float as offen
+        FROM fibu_buchungen
+        WHERE art = $1
+          AND idx = 0
+          AND stornoflag != 2
+          AND ktr = ANY($2::text[])
+          AND typ IN ('HR', 'HG')
+      `;
+
+      const rowSql = (art: "RA" | "RE") => `
+        SELECT re_id as "reId", rnr as "documentNumber", typ, adr_such as "partnerName",
+          betreff as subject, belegdat as date, netto::float as "netTotal",
+          betrag::float as "grossTotal", zahlung::float as "paidAmount",
+          ${FIBU_OPEN_AMOUNT_SQL}::float as "openAmount",
+          sk_betrag::float as "skontoAmount", minderung::float as "minderungAmount",
+          konto_b as "kontoB", konto_g as "kontoG", ktr,
+          CASE WHEN bezahlflag = 2 THEN 'bezahlt'
+               WHEN (zahlung::numeric > 0 OR sk_betrag::numeric > 0 OR minderung::numeric > 0 OR gutschrift::numeric > 0 OR kuerzung::numeric > 0)
+                 AND ${FIBU_OPEN_AMOUNT_SQL} > 0.01 THEN 'teilbezahlt'
+               ELSE 'offen' END as status
+        FROM fibu_buchungen f
+        WHERE art = '${art}' AND idx = 0 AND stornoflag != 2 AND ktr = ANY($1::text[]) AND typ IN ('HR', 'HG')
+        ORDER BY belegdat ASC, re_id ASC
+      `;
+
+      const [outgoingSummary, incomingSummary, outgoingRows, incomingRows] = await Promise.all([
+        pool.query(summarySql, ["RA", ktrCandidates]),
+        pool.query(summarySql, ["RE", ktrCandidates]),
+        pool.query(rowSql("RA"), [ktrCandidates]),
+        pool.query(rowSql("RE"), [ktrCandidates]),
+      ]);
+
+      const normalizeSummary = (row: any, rows: any[]) => {
+        const skontoNetto = Number(row?.skonto_netto || 0);
+        const minderungNetto = Number(row?.minderung_netto || 0);
+        const netto = Number(row?.netto_vor_abzug || 0) - skontoNetto - minderungNetto;
+        const skontoSteuer = Number(row?.skonto || 0) - skontoNetto;
+        const minderungSteuer = Number(row?.minderung || 0) - minderungNetto;
+        const steuer = Number(row?.steuer_vor_abzug || 0) - skontoSteuer - minderungSteuer;
+        return {
+          count: Number(row?.count || 0),
+          erloese: Number(row?.erloese || 0),
+          gutschriften: Number(row?.gutschriften || 0),
+          skonto: Number(row?.skonto || 0),
+          skontoNetto,
+          minderung: Number(row?.minderung || 0),
+          minderungNetto,
+          netto,
+          steuer,
+          brutto: netto + steuer,
+          bezahlt: Number(row?.bezahlt || 0),
+          offen: Number(row?.offen || 0),
+          rows,
+        };
+      };
+
+      res.json({
+        projectId,
+        ktr: ktrCandidates[0] || null,
+        ktrCandidates,
+        source: "fibu_buchungen",
+        rule: "HAPAK Projektfinanzen werden aus FIBUZWO/fibu_buchungen mit idx=0, stornoflag!=2 und KTR=Projekt-Kostentraeger berechnet; Dokument-Summen sind nicht die Wahrheit.",
+        outgoing: normalizeSummary(outgoingSummary.rows[0], outgoingRows.rows),
+        incoming: normalizeSummary(incomingSummary.rows[0], incomingRows.rows),
+      });
+    } catch (err) { next(err); }
+  });
+
   app.get("/api/documents", requireAuth, async (req, res, next) => {
     try {
       if (req.query.customerId) return res.json(await storage.getDocumentsByCustomer(parseInt(req.query.customerId as string)));

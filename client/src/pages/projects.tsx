@@ -498,6 +498,49 @@ interface TimeTrackingSummary {
   }[];
 }
 
+interface ProjectFinanceRow {
+  reId: number;
+  documentNumber: string;
+  typ: string;
+  partnerName: string;
+  subject: string;
+  date: string;
+  netTotal: number;
+  grossTotal: number;
+  paidAmount: number;
+  openAmount: number;
+  skontoAmount?: number;
+  minderungAmount?: number;
+  kontoB?: string;
+  kontoG?: string;
+  ktr: string;
+  status: string;
+}
+
+interface ProjectFinanceBlock {
+  count: number;
+  erloese: number;
+  gutschriften: number;
+  skonto: number;
+  minderung: number;
+  netto: number;
+  steuer: number;
+  brutto: number;
+  bezahlt: number;
+  offen: number;
+  rows: ProjectFinanceRow[];
+}
+
+interface ProjectFinanceSummary {
+  projectId: number;
+  ktr: string | null;
+  ktrCandidates: string[];
+  source: string;
+  rule: string;
+  outgoing: ProjectFinanceBlock;
+  incoming: ProjectFinanceBlock;
+}
+
 const fmtHours = (h: number) =>
   h.toLocaleString("de-DE", {
     minimumFractionDigits: 1,
@@ -1354,10 +1397,12 @@ function DocumentTree({
   documents,
   projectName,
   projectId,
+  financeSummary,
 }: {
   documents: Document[];
   projectName: string;
   projectId: number;
+  financeSummary?: ProjectFinanceSummary | null;
 }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -1697,7 +1742,8 @@ function DocumentTree({
             ].includes(d.type),
           );
           const angebote = documents.filter((d) => d.type === "angebot");
-          const sumRech = rechnungen.reduce((s, d) => {
+          const invoiceFinance = financeSummary?.outgoing;
+          const sumRech = invoiceFinance?.brutto ?? rechnungen.reduce((s, d) => {
             if (d.status === "storniert") return s;
             const fibuBrutto = (d as any).fibuBrutto ? parseFloat((d as any).fibuBrutto) : null;
             if (fibuBrutto !== null) return s + fibuBrutto;
@@ -1711,10 +1757,11 @@ function DocumentTree({
             (s, d) => s + parseFloat(d.netTotal || "0"),
             0,
           );
-          const bezahlt = rechnungen.reduce((s, d) => {
+          const bezahlt = invoiceFinance?.bezahlt ?? rechnungen.reduce((s, d) => {
             const fibuZahlung = (d as any).fibuZahlung ? parseFloat((d as any).fibuZahlung) : null;
             return s + (fibuZahlung !== null ? fibuZahlung : parseFloat(d.paidAmount || "0"));
           }, 0);
+          const invoiceCount = invoiceFinance?.count ?? rechnungen.length;
           return (
             <div className="grid grid-cols-3 gap-2 px-2 pb-2 border-b">
               <div className="text-center">
@@ -1736,7 +1783,7 @@ function DocumentTree({
                   {fmtCurrency(sumRech)}
                 </div>
                 <div className="text-[9px] text-muted-foreground">
-                  {rechnungen.length} Dok.
+                  {invoiceCount} Dok.
                 </div>
               </div>
               <div className="text-center">
@@ -2099,59 +2146,32 @@ export default function ProjectsPage() {
     refetchOnMount: "always",
   });
 
-  const { data: incomingInvoicesResponse } = useQuery<any>({
-    queryKey: ["/api/incoming-invoices-fibu", selectedProject?.projectNumber],
+  const { data: projectFinance } = useQuery<ProjectFinanceSummary | null>({
+    queryKey: ["/api/projects", selectedProject?.id, "finance-summary"],
     queryFn: async () => {
-      if (!selectedProject?.projectNumber) return { data: [], total: 0 };
-      const res = await fetch(
-        `/api/incoming-invoices-fibu?projectNumber=${encodeURIComponent(selectedProject.projectNumber)}&limit=500`,
-        { credentials: "include" },
-      );
-      if (!res.ok) return { data: [], total: 0 };
+      if (!selectedProject) return null;
+      const res = await fetch(`/api/project-finance-summary/${selectedProject.id}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!selectedProject?.projectNumber,
+    enabled: !!selectedProject,
+    staleTime: 2000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
+
   const projectDocumentList: Document[] = Array.isArray(projectDocuments)
     ? projectDocuments
     : Array.isArray((projectDocuments as any)?.data)
       ? (projectDocuments as any).data
       : [];
-  const incomingInvoices = incomingInvoicesResponse?.data || [];
 
-  const outgoingTypes = ["rechnung", "abschlagsrechnung"];
-  const outgoingInvoices =
-    projectDocumentList.filter((d) => outgoingTypes.includes(d.type));
-  const outgoingSumNetto = outgoingInvoices.reduce((s, d) => {
-    const net = parseFloat(d.netTotal || "0");
-    if (d.type === "abschlagsrechnung" && d.parentDocumentId) {
-      const parent = projectDocumentList.find((p) => p.id === d.parentDocumentId);
-      if (parent) {
-        const delta = net - parseFloat(parent.netTotal || "0");
-        return s + (delta >= 0 ? delta : net);
-      }
-    }
-    return s + net;
-  }, 0);
-  const outgoingSumBrutto = outgoingInvoices.reduce((s, d) => {
-    const gross = parseFloat(d.grossTotal || "0");
-    if (d.type === "abschlagsrechnung" && d.parentDocumentId) {
-      const parent = projectDocumentList.find((p) => p.id === d.parentDocumentId);
-      if (parent) {
-        const delta = gross - parseFloat(parent.grossTotal || "0");
-        return s + (delta >= 0 ? delta : gross);
-      }
-    }
-    return s + gross;
-  }, 0);
-  const incomingSumNetto = (incomingInvoices || []).reduce(
-    (s: number, d: any) => s + parseFloat(d.netTotal || "0"),
-    0,
-  );
-  const incomingSumBrutto = (incomingInvoices || []).reduce(
-    (s: number, d: any) => s + parseFloat(d.grossTotal || "0"),
-    0,
-  );
+  const outgoingInvoices = projectFinance?.outgoing.rows || [];
+  const incomingFinanceRows = projectFinance?.incoming.rows || [];
+  const outgoingSumNetto = projectFinance?.outgoing.netto || 0;
+  const incomingSumNetto = projectFinance?.incoming.netto || 0;
 
   const { data: ertragEmployees } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
@@ -2551,6 +2571,7 @@ export default function ProjectsPage() {
                       documents={projectDocumentList}
                       projectName={selectedProject.name}
                       projectId={selectedProject.id}
+                      financeSummary={projectFinance}
                     />
                   </CardContent>
                 </Card>
@@ -2699,9 +2720,9 @@ export default function ProjectsPage() {
                       <TableBody>
                         {outgoingInvoices.map((doc) => (
                           <TableRow
-                            key={doc.id}
+                            key={doc.reId}
                             className="text-sm"
-                            data-testid={`row-ausgang-${doc.id}`}
+                            data-testid={`row-ausgang-${doc.reId}`}
                           >
                             <TableCell className="font-mono text-xs py-2">
                               {fmtDocNumber(doc.documentNumber)}
@@ -2766,11 +2787,11 @@ export default function ProjectsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(incomingInvoices || []).map((inv: any) => (
+                        {incomingFinanceRows.map((inv: any) => (
                           <TableRow
-                            key={inv.id}
+                            key={inv.reId}
                             className="text-sm"
-                            data-testid={`row-eingang-${inv.id}`}
+                            data-testid={`row-eingang-${inv.reId}`}
                           >
                             <TableCell className="font-mono text-xs py-2">
                               {inv.invoiceNumber || "-"}
@@ -2779,7 +2800,7 @@ export default function ProjectsPage() {
                               {fmtDate(inv.date)}
                             </TableCell>
                             <TableCell className="py-2 text-xs truncate max-w-[200px]">
-                              {inv.supplier}
+                              {inv.partnerName || "-"}
                             </TableCell>
                             <TableCell className="text-right py-2 text-xs font-medium">
                               {fmtCurrency(inv.netTotal)}
@@ -2794,7 +2815,7 @@ export default function ProjectsPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {(incomingInvoices || []).length === 0 && (
+                        {incomingFinanceRows.length === 0 && (
                           <TableRow>
                             <TableCell
                               colSpan={6}
@@ -2806,7 +2827,7 @@ export default function ProjectsPage() {
                         )}
                       </TableBody>
                     </Table>
-                    {(incomingInvoices || []).length > 0 && (
+                    {incomingFinanceRows.length > 0 && (
                       <div
                         className="flex justify-end gap-6 px-4 py-2 border-t text-xs font-semibold"
                         data-testid="text-eingang-summe"

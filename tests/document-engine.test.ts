@@ -1249,6 +1249,40 @@ describe("invoice register finance flow guards", () => {
     assert.match(nakaSource, /noch offen: \{fmtCurrency\(autoCalc\.erloese\.offen\)\}/);
   });
 
+  it("keeps the HAPAK data contract explicit and uses FIBU for project finances", () => {
+    const contract = fs.readFileSync(path.resolve("docs/hapak-data-contract.md"), "utf8");
+    const routesSource = fs.readFileSync(path.resolve("server/routes.ts"), "utf8");
+    const projectsSource = fs.readFileSync(path.resolve("client/src/pages/projects.tsx"), "utf8");
+    const financeRoute = routesSource.slice(
+      routesSource.indexOf('app.get("/api/project-finance-summary/:projectId"'),
+      routesSource.indexOf('app.get("/api/documents"'),
+    );
+    const projectFinanceClient = projectsSource.slice(
+      projectsSource.indexOf("const { data: projectFinance }"),
+      projectsSource.indexOf("const { data: ertragEmployees }"),
+    );
+
+    assert.match(contract, /Projektfinanzen duerfen nicht aus `documents\.net_total`/);
+    assert.match(contract, /FIBUZWO.*fibu_buchungen/);
+    assert.match(contract, /KTR = projects\.cost_center\/import_source_key/);
+    assert.match(contract, /Jumbos sind keine pauschalen Positionen/);
+
+    assert.match(financeRoute, /FROM fibu_buchungen/);
+    assert.match(financeRoute, /project\.cost_center/);
+    assert.match(financeRoute, /project\.import_source_key/);
+    assert.match(financeRoute, /AND idx = 0/);
+    assert.match(financeRoute, /AND stornoflag != 2/);
+    assert.match(financeRoute, /AND ktr = ANY\(\$2::text\[\]\)/);
+    assert.doesNotMatch(financeRoute, /FROM documents/);
+
+    assert.match(projectFinanceClient, /\/api\/project-finance-summary\/\$\{selectedProject\.id\}/);
+    assert.match(projectFinanceClient, /projectFinance\?\.outgoing\.netto/);
+    assert.match(projectFinanceClient, /projectFinance\?\.incoming\.netto/);
+    assert.match(projectsSource, /financeSummary=\{projectFinance\}/);
+    assert.doesNotMatch(projectFinanceClient, /parseFloat\(d\.netTotal/);
+    assert.doesNotMatch(projectFinanceClient, /parentDocumentId/);
+  });
+
   it("bases dashboard finance widgets on outgoing invoice ledger main rows", () => {
     const storageSource = fs.readFileSync(path.resolve("server/storage.ts"), "utf8");
     const routesSource = fs.readFileSync(path.resolve("server/routes.ts"), "utf8");
