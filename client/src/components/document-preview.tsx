@@ -266,8 +266,8 @@ export default function DocumentPreview({
           <div style={{
             width: `${Math.round(210 * zoom)}mm`,
             height: "100%",
-            overflow: "hidden",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+            overflow: "visible",
+            background: "transparent",
           }}>
             <iframe
               ref={iframeRef}
@@ -275,7 +275,7 @@ export default function DocumentPreview({
               title="Druckvorschau"
               style={{
                 border: "none",
-                background: "white",
+                background: "transparent",
                 width: "210mm",
                 height: `${Math.round(100 / zoom)}%`,
                 transform: `scale(${zoom})`,

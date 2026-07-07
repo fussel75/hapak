@@ -124,6 +124,29 @@ export default function PrintDocumentPage() {
       @font-face { font-family: 'Swis721 Lt BT'; font-style: italic; font-weight: 400; src: url('/fonts/NimbusSans-Italic.otf') format('opentype'); font-feature-settings: "liga" 0; }
       @font-face { font-family: 'Swis721 BT'; font-style: normal; font-weight: 400; src: url('/fonts/NimbusSans-Regular.otf') format('opentype'); font-feature-settings: "liga" 0; }
       @font-face { font-family: 'Swis721 BT'; font-style: normal; font-weight: 700; src: url('/fonts/NimbusSans-Bold.otf') format('opentype'); font-feature-settings: "liga" 0; }
+      body { background: transparent; }
+      #print-container {
+        background: transparent !important;
+        padding: 0 0 32pt 0;
+      }
+      #print-container .a4-page {
+        margin: 0 auto 32pt auto !important;
+        box-shadow: 0 10pt 24pt rgba(0, 0, 0, 0.32);
+      }
+      #print-container .a4-page:last-child {
+        margin-bottom: 0 !important;
+      }
+      @media print {
+        body { background: white; }
+        #print-container {
+          background: white !important;
+          padding: 0 !important;
+        }
+        #print-container .a4-page {
+          margin: 0 !important;
+          box-shadow: none !important;
+        }
+      }
       * { font-feature-settings: "liga" 0 !important; font-variant-ligatures: none !important; }
     `;
     document.head.appendChild(style);

@@ -3253,6 +3253,19 @@ describe("document pagination", () => {
     assert.doesNotMatch(source, /contentEditable=\{singleBlock\}/);
   });
 
+  it("keeps print preview pages visually separated on screen only", () => {
+    const source = fs.readFileSync(path.join(process.cwd(), "client/src/pages/print-document.tsx"), "utf8");
+    const previewSource = fs.readFileSync(path.join(process.cwd(), "client/src/components/document-preview.tsx"), "utf8");
+
+    assert.match(source, /#print-container \.a4-page/);
+    assert.match(source, /margin: 0 auto 32pt auto !important/);
+    assert.match(source, /box-shadow: 0 10pt 24pt rgba\(0, 0, 0, 0\.32\)/);
+    assert.match(source, /@media print[\s\S]*margin: 0 !important/);
+    assert.match(source, /@media print[\s\S]*box-shadow: none !important/);
+    assert.match(previewSource, /overflow: "visible"/);
+    assert.match(previewSource, /background: "transparent"/);
+  });
+
   it("ignores imported HAPAK text artifacts after the totals", () => {
     const items = [
       item({ _clientId: "net", type: "nettosumme", title: "Nettosumme" }),
