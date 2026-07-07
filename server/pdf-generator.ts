@@ -1194,6 +1194,11 @@ function drawPositionRow(
   const flag = item.positionFlag;
   const isAlt = flag === "alternativ";
   const isBedarf = flag === "bedarf";
+  const isOptional = isAlt || isBedarf;
+  const fmtOptionalCurrency = (value: string | number | null | undefined) => {
+    const formatted = fmtCurrency(value, dezPreise);
+    return isOptional ? `(${formatted})` : formatted;
+  };
 
   pdf.fontSize(wf.normal.size).font(wf.normal.name).fillColor("#000000");
   pdf.text(posNumber, cl.posX, y, { width: cl.posW });
@@ -1224,7 +1229,7 @@ function drawPositionRow(
   pdf.text(item.unit || "", cl.unitX, rowStartY, { width: cl.unitW, align: "center" });
   if (!hidePrices) {
     pdf.text(fmtCurrency(item.unitPrice, dezPreise), cl.epX, rowStartY, { width: cl.epW, align: "right" });
-    pdf.text(fmtCurrency(item.totalPrice, dezPreise), cl.gpX, rowStartY, { width: cl.gpW, align: "right" });
+    pdf.text(fmtOptionalCurrency(item.totalPrice), cl.gpX, rowStartY, { width: cl.gpW, align: "right" });
   }
 
   let qtyEndY = rowStartY + 14;

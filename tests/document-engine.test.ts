@@ -1029,6 +1029,17 @@ describe("document editor display polish guards", () => {
     assert.match(rowSource, /isJumbo && !isSubItem && jumboMenuOpen &&/);
     assert.match(rowSource, /data-testid="jumbo-menu-manuell"/);
     assert.match(rowSource, /data-testid="jumbo-menu-material"/);
+    assert.match(rowSource, /const isOptionalPosition = isAlt \|\| isBedarf/);
+    assert.match(rowSource, /const optionalTextClass = isOptionalPosition \? "italic text-slate-700" : ""/);
+    assert.match(rowSource, /const optionalPriceClass = isOptionalPosition \? "italic text-slate-600" : ""/);
+    assert.match(rowSource, /return isOptionalPosition \? `\(\$\{formatted\}\)` : formatted/);
+    assert.match(rowSource, /fmtOptionalP\(item\.totalPrice\)/);
+    assert.doesNotMatch(rowSource, /item\.positionFlag === "bedarf" \? "text-blue-500"/);
+    assert.doesNotMatch(rowSource, /item\.positionFlag === "alternativ" \? "text-amber-500"/);
+    const pdfSource = fs.readFileSync(path.resolve("server/pdf-generator.ts"), "utf8");
+    assert.match(pdfSource, /const isOptional = isAlt \|\| isBedarf/);
+    assert.match(pdfSource, /return isOptional \? `\(\$\{formatted\}\)` : formatted/);
+    assert.match(pdfSource, /fmtOptionalCurrency\(item\.totalPrice\)/);
     const priceDialogSource = fs.readFileSync(path.resolve("client/src/pages/document-editor/components/dialogs/price-dialog.tsx"), "utf8");
     assert.match(priceDialogSource, /const calculationRows = children\.length > 0 \? children : parent \? \[parent\] : \[\]/);
     assert.match(priceDialogSource, /if \(externalEk > 0\)/);

@@ -242,6 +242,7 @@ export const PositionRow = memo(function PositionRow({
 
   const isAlt = item.positionFlag === "alternativ";
   const isBedarf = item.positionFlag === "bedarf";
+  const isOptionalPosition = isAlt || isBedarf;
   const altStyle: React.CSSProperties = (isAlt || isBedarf)
     ? altPosGesamtpreis === "fett"
       ? { fontWeight: "bold" }
@@ -463,11 +464,16 @@ export const PositionRow = memo(function PositionRow({
     ? `(${fmtQty(item.originalQuantity, dezimalstellenMengen)})`
     : null;
 
+  const optionalTextClass = isOptionalPosition ? "italic text-slate-700" : "";
+  const optionalPriceClass = isOptionalPosition ? "italic text-slate-600" : "";
+  const fmtOptionalP = (v: string | number | null | undefined) => {
+    const formatted = fmtP(v);
+    return isOptionalPosition ? `(${formatted})` : formatted;
+  };
   const gpFlagColor =
-    item.positionFlag === "alternativ" ? "text-amber-500"
-    : item.positionFlag === "bedarf" ? "text-blue-500"
-    : item.positionFlag === "festpreis" ? "text-green-600"
-    : "text-gray-900";
+    optionalPriceClass ||
+    (item.positionFlag === "festpreis" ? "text-green-600" : "text-gray-900");
+  const optionalTitle = item.positionFlag === "alternativ" ? "Alternativposition" : item.positionFlag === "bedarf" ? "Eventual-/Bedarfsposition" : item.positionFlag === "festpreis" ? "Festpreisposition" : undefined;
 
   const dragHandle = (
     <span
@@ -826,7 +832,7 @@ export const PositionRow = memo(function PositionRow({
         )}
         <td className="text-right py-1.5 px-0.5 align-top" style={{ width: cwQty }} onClick={(e) => e.stopPropagation()}>
           <input
-            className="w-full text-right text-gray-800 bg-transparent border-0 outline-none focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums leading-[1.4]"
+            className={`w-full text-right text-gray-800 bg-transparent border-0 outline-none focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums leading-[1.4] ${optionalTextClass}`}
             style={{ height: "auto" }}
             value={qtyDisplay}
             onChange={(e) => handleQtyChange(e.target.value)}
@@ -840,9 +846,9 @@ export const PositionRow = memo(function PositionRow({
         </td>
         <td className="text-left py-1.5 pl-0.5 pr-0 align-top" style={{ width: cwUnit }} onClick={(e) => e.stopPropagation()}>
           {unitEditable ? (
-            renderUnitEditor("w-full border-0 bg-transparent outline-none rounded cursor-pointer appearance-none text-gray-800 p-0 m-0 leading-[1.4]")
+            renderUnitEditor(`w-full border-0 bg-transparent outline-none rounded cursor-pointer appearance-none text-gray-800 p-0 m-0 leading-[1.4] ${optionalTextClass}`)
           ) : (
-            <span className="text-gray-500 text-xs leading-[1.4]" data-field="unit">{item.unit || ""}</span>
+            <span className={`text-gray-500 text-xs leading-[1.4] ${optionalTextClass}`} data-field="unit">{item.unit || ""}</span>
           )}
         </td>
         <td className="relative py-1.5 px-1 align-top" onClick={(e) => e.stopPropagation()}>
@@ -859,7 +865,7 @@ export const PositionRow = memo(function PositionRow({
                 onUpdate(index, "title", title);
                 onUpdate(index, "description", description);
               }}
-              className="w-full text-gray-900 bg-transparent border-0 outline-none leading-[1.4] px-0"
+              className={`w-full text-gray-900 bg-transparent border-0 outline-none leading-[1.4] px-0 ${optionalTextClass}`}
               placeholder="Bezeichnung..."
               onKeyDown={(e) => handleTabNav(e, "title")}
               testId={`input-title-${index}`}
@@ -908,7 +914,7 @@ export const PositionRow = memo(function PositionRow({
         <td className="text-right py-1.5 pr-1 pl-0 align-top" style={{ width: cwEP }}>
           {showEP && (
             <button
-              className="w-full text-right text-gray-800 bg-transparent border-0 outline-none hover:bg-cyan-50/60 focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums cursor-pointer leading-[1.4]"
+              className={`w-full text-right text-gray-800 bg-transparent border-0 outline-none hover:bg-cyan-50/60 focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums cursor-pointer leading-[1.4] ${optionalTextClass}`}
               onClick={(e) => { e.stopPropagation(); onOpenPriceDialog(); }}
               data-field="unitPrice"
               data-testid={`button-price-${index}`}
@@ -918,9 +924,9 @@ export const PositionRow = memo(function PositionRow({
           )}
         </td>
         <td className={`text-right py-1.5 pr-0.5 pl-0 align-top tabular-nums font-medium leading-[1.4] ${gpFlagColor}`} style={{ width: cwGP }}
-          title={item.positionFlag === "alternativ" ? "Alternativposition" : item.positionFlag === "bedarf" ? "Bedarfsposition" : item.positionFlag === "festpreis" ? "Festpreisposition" : undefined}
+          title={optionalTitle}
         >
-          {showGP && gp !== 0 ? fmtP(item.totalPrice) : ""}
+          {showGP && gp !== 0 ? fmtOptionalP(item.totalPrice) : ""}
         </td>
         {kalkCells}
       </tr>
@@ -1008,7 +1014,7 @@ export const PositionRow = memo(function PositionRow({
       )}
       <td className="text-right py-1.5 px-1 align-top" style={{ width: cwQty }} onClick={(e) => e.stopPropagation()}>
         <input
-          className="w-full text-right text-gray-800 bg-transparent border-0 outline-none focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums"
+          className={`w-full text-right text-gray-800 bg-transparent border-0 outline-none focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums ${optionalTextClass}`}
           value={qtyDisplay}
           onChange={(e) => handleQtyChange(e.target.value)}
           onBlur={(e) => handleQtyBlur(e.target.value)}
@@ -1021,9 +1027,9 @@ export const PositionRow = memo(function PositionRow({
       </td>
       <td className="text-left py-1.5 pl-0.5 pr-0 align-top" style={{ width: cwUnit }} onClick={(e) => e.stopPropagation()}>
         {unitEditable ? (
-          renderUnitEditor("w-full border-0 bg-transparent outline-none rounded cursor-pointer appearance-none text-gray-800", `select-unit-${index}`)
+          renderUnitEditor(`w-full border-0 bg-transparent outline-none rounded cursor-pointer appearance-none text-gray-800 ${optionalTextClass}`, `select-unit-${index}`)
         ) : (
-          <span className="text-gray-500 text-xs" data-field="unit">{item.unit || ""}</span>
+          <span className={`text-gray-500 text-xs ${optionalTextClass}`} data-field="unit">{item.unit || ""}</span>
         )}
       </td>
       <td className="py-1.5 px-1 align-top" onClick={(e) => e.stopPropagation()}>
@@ -1040,7 +1046,7 @@ export const PositionRow = memo(function PositionRow({
               onUpdate(index, "title", title);
               onUpdate(index, "description", description);
             }}
-            className="w-full text-gray-900 bg-transparent border-0 outline-none leading-relaxed px-0"
+            className={`w-full text-gray-900 bg-transparent border-0 outline-none leading-relaxed px-0 ${optionalTextClass}`}
             placeholder="Bezeichnung"
             onKeyDown={(e) => handleTabNav(e, "title")}
             testId={`input-title-${index}`}
@@ -1053,7 +1059,7 @@ export const PositionRow = memo(function PositionRow({
       <td className="text-right py-1.5 pr-1 pl-0 align-top" style={{ width: cwEP }}>
         {showEP && (
           <button
-            className="w-full text-right text-gray-800 bg-transparent border-0 outline-none hover:bg-cyan-50/60 focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums cursor-pointer"
+            className={`w-full text-right text-gray-800 bg-transparent border-0 outline-none hover:bg-cyan-50/60 focus:bg-cyan-50/60 rounded px-1 -mx-1 tabular-nums cursor-pointer ${optionalTextClass}`}
             onClick={(e) => { e.stopPropagation(); onOpenPriceDialog(); }}
             data-field="unitPrice"
             data-testid={`input-ep-${index}`}
@@ -1063,9 +1069,9 @@ export const PositionRow = memo(function PositionRow({
         )}
       </td>
       <td className={`text-right py-1.5 pr-0.5 pl-0 align-top tabular-nums ${gpFlagColor}`} style={{ width: cwGP }}
-        title={item.positionFlag === "alternativ" ? "Alternativposition" : item.positionFlag === "bedarf" ? "Bedarfsposition" : item.positionFlag === "festpreis" ? "Festpreisposition" : undefined}
+        title={optionalTitle}
       >
-        {showGP && gp !== 0 ? fmtP(item.totalPrice) : ""}
+        {showGP && gp !== 0 ? fmtOptionalP(item.totalPrice) : ""}
         {quickActions}
       </td>
       {kalkCells}
